@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+
+<html class="light" lang="de"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#1e3a5f",
+                        accent: "#f97316",
+                        success: "#16a34a",
+                        warning: "#f59e0b",
+                        danger: "#dc2626",
+                        background: "#f8fafc"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    fontFamily: {
+                        headline: ["Inter", "sans-serif"],
+                        body: ["Inter", "sans-serif"],
+                        label: ["Inter", "sans-serif"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .pb-safe {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-slate-50 font-body text-slate-900 min-h-screen flex flex-col">
+<!-- TopAppBar (Based on Shared Components JSON) -->
+<header class="bg-slate-900 dark:bg-slate-950 text-white dark:text-slate-100 shadow-sm docked full-width top-0 sticky z-50">
+<div class="flex items-center justify-between px-4 h-16 w-full">
+<div class="flex items-center gap-3">
+<button class="hover:bg-slate-800 transition-colors active:scale-95 transition-transform p-2 rounded-full">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<div>
+<h1 class="font-sans text-lg font-semibold tracking-tight">SuperEasy</h1>
+<p class="text-xs text-slate-300">Mo, 27.10.2025</p>
+</div>
+</div>
+<div class="flex items-center">
+<span class="text-xl font-bold text-white">az2.0</span>
+</div>
+</div>
+</header>
+<main class="flex-grow p-4 space-y-6 max-w-md mx-auto w-full">
+<!-- Project Selection Chip -->
+<section>
+<label class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 block">Bauvorhaben</label>
+<button class="w-full flex items-center justify-between bg-white border border-slate-200 p-4 rounded-xl shadow-sm active:scale-[0.98] transition-all">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center text-orange-600">
+<span class="material-symbols-outlined" data-icon="construction">construction</span>
+</div>
+<span class="text-lg font-semibold text-slate-800 uppercase">Elbchaussee 499</span>
+</div>
+<span class="material-symbols-outlined text-slate-400" data-icon="expand_more">expand_more</span>
+</button>
+</section>
+<!-- Time Entry Row -->
+<section class="grid grid-cols-2 gap-4">
+<div class="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
+<label class="text-xs font-bold text-slate-500 mb-1 block">Von</label>
+<input class="w-full text-2xl font-bold border-none p-0 focus:ring-0 text-slate-800 bg-transparent" type="time" value="07:00"/>
+</div>
+<div class="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
+<label class="text-xs font-bold text-slate-500 mb-1 block">Bis</label>
+<input class="w-full text-2xl font-bold border-none p-0 focus:ring-0 text-slate-800 bg-transparent" type="time" value="16:00"/>
+</div>
+</section>
+<!-- Pause Control -->
+<section class="bg-white border border-slate-200 p-4 rounded-xl shadow-sm space-y-4">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-orange-600" data-icon="coffee">coffee</span>
+<span class="font-semibold text-slate-700">Pause abziehen</span>
+</div>
+<!-- Toggle Switch UI -->
+<button class="w-12 h-6 bg-orange-500 rounded-full relative transition-colors">
+<div class="absolute right-1 top-1 w-4 h-4 bg-white rounded-full"></div>
+</button>
+</div>
+<div class="flex gap-2">
+<button class="flex-1 py-3 px-4 rounded-lg bg-orange-600 text-white font-bold text-sm transition-all active:scale-95">
+                    0:30
+                </button>
+<button class="flex-1 py-3 px-4 rounded-lg bg-slate-100 text-slate-600 font-bold text-sm hover:bg-slate-200 transition-all active:scale-95">
+                    1:00
+                </button>
+</div>
+</section>
+<!-- Activity Form -->
+<section class="space-y-3">
+<label class="text-xs font-bold uppercase tracking-wider text-slate-500 block">Was hast du gemacht?</label>
+<div class="relative">
+<textarea class="w-full border-slate-200 rounded-xl focus:ring-orange-500 focus:border-orange-500 min-h-[120px] p-4 text-slate-700 shadow-sm" placeholder="Tätigkeit beschreiben..."></textarea>
+<div class="absolute bottom-3 right-3 text-slate-400">
+<span class="material-symbols-outlined" data-icon="mic">mic</span>
+</div>
+</div>
+<div class="flex flex-wrap gap-2 pt-1">
+<button class="bg-slate-200/60 text-slate-700 px-3 py-1.5 rounded-full text-xs font-medium hover:bg-slate-300 active:scale-95 transition-all">
+                    Stichbalken zugeschnitten
+                </button>
+<button class="bg-slate-200/60 text-slate-700 px-3 py-1.5 rounded-full text-xs font-medium hover:bg-slate-300 active:scale-95 transition-all">
+                    Borsalzbehandlung
+                </button>
+</div>
+</section>
+</main>
+<!-- Bottom Action Bar -->
+<footer class="bg-white border-t border-slate-200 p-4 pb-safe space-y-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] sticky bottom-0">
+<div class="flex justify-between items-center px-2">
+<span class="text-slate-500 font-medium">Gesamtstunden:</span>
+<span class="text-2xl font-black text-orange-600">8,5 h</span>
+</div>
+<button class="w-full bg-orange-600 text-white font-black py-4 rounded-xl text-lg shadow-lg shadow-orange-200 active:scale-95 transition-all uppercase tracking-wide">
+            Speichern
+        </button>
+</footer>
+<!-- BottomNavBar (Suppressed for transactional screen as per Mandate, but placeholder for structure if needed) -->
+<!-- Navigation hidden to prioritize the form canvas -->
+</body></html>

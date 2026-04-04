@@ -1,0 +1,38 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "zeiteintraege",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "mitarbeiterId", "order": "ASCENDING" },
+        { "fieldPath": "datum", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "zeiteintraege",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "baustelleId", "order": "ASCENDING" },
+        { "fieldPath": "datum", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "zeiteintraege",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "mitarbeiterId", "order": "ASCENDING" },
+        { "fieldPath": "baustelleId", "order": "ASCENDING" },
+        { "fieldPath": "datum", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "abwesenheiten",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "mitarbeiterId", "order": "ASCENDING" },
+        { "fieldPath": "datum", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

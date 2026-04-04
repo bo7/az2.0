@@ -1,0 +1,13 @@
+{
+  "projects": {
+    "default": "az2-zeiterfassung"
+  },
+  "targets": {
+    "az2-zeiterfassung": {
+      "hosting": {
+        "pwa": ["az2-zeiterfassung-pwa"],
+        "admin": ["az2-zeiterfassung-admin"]
+      }
+    }
+  }
+}

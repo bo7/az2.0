@@ -1,0 +1,87 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------------------------------------------------------------------------
+    // Helper: resolve the role of the requesting user from their mitarbeiter doc
+    // ---------------------------------------------------------------------------
+    function getUserRole() {
+      return get(/databases/$(database)/documents/mitarbeiter/$(request.auth.uid)).data.rolle;
+    }
+
+    function isAdmin() {
+      return getUserRole() == 'admin';
+    }
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // ---------------------------------------------------------------------------
+    // mitarbeiter
+    //   - users can read/write their own document (doc ID == auth.uid)
+    //   - admin can read/write all documents
+    // ---------------------------------------------------------------------------
+    match /mitarbeiter/{mitarbeiterId} {
+      allow read, write: if isAuthenticated() && mitarbeiterId == request.auth.uid;
+      allow read, write: if isAuthenticated() && isAdmin();
+    }
+
+    // ---------------------------------------------------------------------------
+    // baustellen
+    //   - users can read if: assigned OR fuerAlle == true
+    //   - admin can read/write all
+    // ---------------------------------------------------------------------------
+    match /baustellen/{baustelleId} {
+      allow read: if isAuthenticated()
+                  && (request.auth.uid in resource.data.zugewieseneMitarbeiter
+                      || resource.data.fuerAlle == true);
+      allow read, write: if isAuthenticated() && isAdmin();
+    }
+
+    // ---------------------------------------------------------------------------
+    // zeiteintraege
+    //   - users can create/read/update their own (mitarbeiterId == auth.uid)
+    //   - admin can do everything
+    // ---------------------------------------------------------------------------
+    match /zeiteintraege/{eintragId} {
+      allow create: if isAuthenticated()
+                    && request.resource.data.mitarbeiterId == request.auth.uid;
+      allow read, update: if isAuthenticated()
+                          && resource.data.mitarbeiterId == request.auth.uid;
+      allow read, write: if isAuthenticated() && isAdmin();
+    }
+
+    // ---------------------------------------------------------------------------
+    // abwesenheiten
+    //   - users can create/read/update their own (mitarbeiterId == auth.uid)
+    //   - admin can do everything
+    // ---------------------------------------------------------------------------
+    match /abwesenheiten/{abwesenheitId} {
+      allow create: if isAuthenticated()
+                    && request.resource.data.mitarbeiterId == request.auth.uid;
+      allow read, update: if isAuthenticated()
+                          && resource.data.mitarbeiterId == request.auth.uid;
+      allow read, write: if isAuthenticated() && isAdmin();
+    }
+
+    // ---------------------------------------------------------------------------
+    // auftraggeber
+    //   - only admin can read/write
+    // ---------------------------------------------------------------------------
+    match /auftraggeber/{auftraggeberId} {
+      allow read, write: if isAuthenticated() && isAdmin();
+    }
+
+    // ---------------------------------------------------------------------------
+    // einstellungen
+    //   - any authenticated user can read
+    //   - only admin can write
+    // ---------------------------------------------------------------------------
+    match /einstellungen/{einstellungId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isAdmin();
+    }
+  }
+}

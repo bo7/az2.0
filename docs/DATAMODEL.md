@@ -15,6 +15,7 @@
     "pauseDauer": "00:30",
     "wochenstundenSoll": 40
   },
+  "standardBaustelleId": "baustellen-id-oder-null",
   "erstelltAm": "timestamp"
 }
 ```
@@ -42,13 +43,24 @@ Rollen: `mitarbeiter` | `vorarbeiter` | `admin`
   "id": "auto-id",
   "name": "Nienstedten, Elbchaussee 499",
   "auftraggeberId": "auftraggeber-ref",
+  "auftraggeberIstBaustelle": false,
   "adresse": "Elbchaussee 499, 22609 Nienstedten",
-  "aktiv": true,
+  "von": "2025-10-01",
+  "bis": null,
   "zugewieseneMitarbeiter": ["uid1", "uid2"],
+  "fuerAlle": false,
   "beschreibung": "101 O Dachsanierung",
   "erstelltAm": "timestamp"
 }
 ```
+Felder:
+- `auftraggeberIstBaustelle`: wenn true, werden Name/Adresse vom Auftraggeber kopiert
+- `von` / `bis`: Laufzeit der Baustelle. `bis: null` = offen. Baustelle gilt als geschlossen wenn `bis` in der Vergangenheit
+- `zugewieseneMitarbeiter`: UIDs der zugewiesenen MA
+- `fuerAlle`: wenn true, ist die Baustelle fuer alle MA sichtbar (keine spezielle Zuweisung noetig)
+
+**Sichtbarkeit in PWA:**
+MA sieht offene Baustellen, die entweder `fuerAlle: true` sind ODER seine UID in `zugewieseneMitarbeiter` enthalten. Geschlossene Baustellen werden nicht angezeigt.
 
 ---
 
@@ -60,23 +72,49 @@ Rollen: `mitarbeiter` | `vorarbeiter` | `admin`
   "baustelleId": "baustellen-id",
   "datum": "2025-10-27",
   "modus": "standard",
-  "arbeitsbeginn": "07:00",
-  "arbeitsende": "16:00",
-  "pauseDauer": 30,
-  "gesamtstunden": 8.5,
-  "taetigkeiten": [
+  "gesamtstunden": 8.0,
+  "positionen": [
     {
-      "beschreibung": "Stichbalken 20/24 (O6) zugeschnitten und ausgerichtet",
-      "stunden": 6.25,
-      "material": [
-        { "bezeichnung": "Stichbalken 20/24", "menge": 1, "einheit": "Stk" }
-      ]
-    }
-  ],
-  "zulagen": [
+      "typ": "taetigkeit",
+      "von": "07:00",
+      "bis": "09:00",
+      "beschreibung": "Moerteln",
+      "stunden": 2.0
+    },
     {
-      "beschreibung": "Mauerwerk abgetragen und mit Schwammsperrmittel behandelt",
-      "stunden": 1.5
+      "typ": "material",
+      "taetigkeitIndex": 0,
+      "bezeichnung": "Moertel",
+      "menge": 5,
+      "einheit": "Sack"
+    },
+    {
+      "typ": "material",
+      "taetigkeitIndex": 0,
+      "bezeichnung": "Naegel",
+      "menge": null,
+      "einheit": "ohne"
+    },
+    {
+      "typ": "taetigkeit",
+      "von": "09:00",
+      "bis": "09:30",
+      "beschreibung": "Pause",
+      "stunden": -0.5
+    },
+    {
+      "typ": "taetigkeit",
+      "von": "09:30",
+      "bis": "12:00",
+      "beschreibung": "Dachdecken",
+      "stunden": 2.5
+    },
+    {
+      "typ": "material",
+      "taetigkeitIndex": 2,
+      "bezeichnung": "Dachziegel",
+      "menge": 200,
+      "einheit": "Stk"
     }
   ],
   "status": "erfasst",
@@ -86,6 +124,21 @@ Rollen: `mitarbeiter` | `vorarbeiter` | `admin`
 }
 ```
 Status: `entwurf` | `erfasst` | `freigegeben`
+
+**Positionen-Typen:**
+- `taetigkeit`: Von/Bis-Zeiten + Beschreibung + berechnete Stunden
+  - Pause wird als Taetigkeit mit negativen Stunden erfasst (z.B. -0.5)
+- `material`: Gehoert zur vorherigen Taetigkeit (via `taetigkeitIndex`)
+  - `bezeichnung`: Freitext mit Autocomplete aus History
+  - `menge`: Zahlenwert, `null` bei Einheit "ohne" (z.B. Naegel, Schrauben)
+  - `einheit`: `Stk` | `m` | `m2` | `VE` (Verpackungseinheit) | `ohne` (keine Mengenangabe)
+
+**Gesamtstunden:** Summe aller Taetigkeits-Stunden (inkl. negative Pausen)
+
+**Selbstlernende Vorschlaege:**
+- Top 3 meistgenutzte Materialien der aktuellen Baustelle als Chips
+- Autocomplete durchsucht eigene Materialeintraege der letzten 90 Tage
+- Spaeter: LLM extrahiert strukturierte Materialliste aus Freitext
 
 ---
 

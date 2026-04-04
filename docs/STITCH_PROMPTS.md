@@ -40,16 +40,15 @@ Mobile 390x844px.
 
 ### PWA-02: Heute (Startscreen)
 ```
-Mobile dashboard for construction worker time tracking.
+Mobile dashboard for construction worker time tracking. Multiple bookings per day possible (site changes).
 Top bar: "Montag, 27. Oktober 2025" with week number "KW 44".
 Below: greeting "Hallo Michael" in slate blue.
-Status card: large colored circle (red=missing, orange=partial, green=complete) 
-  with text "Heute noch nicht erfasst" or hours summary.
-Baustelle selector: dropdown card showing current site "Elbchaussee 499".
-Two large mode buttons side by side:
-  - "SuperEasy" (orange, rocket icon)
-  - "Standard" (slate, list icon)
-Bottom: "Urlaub" and "Krank" text buttons.
+Main area: list of today's time entry cards. Each card shows: Baustelle name, time range (07:00-16:00), hours (8,5h), tap to edit.
+If no entries yet: status card with red circle and text "Heute noch nicht erfasst".
+Daily total bar: "Tagessumme: 8,5 h" across all sites.
+Large orange "+ Eintrag" floating action button at bottom right.
+When tapping +: Baustelle selector (default site pre-selected), mode choice SuperEasy/Standard.
+Bottom: small "Urlaub" and "Krank" text links.
 Bottom navigation bar with 4 icons: Heute, Kalender, Baustellen, Profil.
 Mobile 390x844px.
 ```
@@ -71,16 +70,17 @@ Mobile 390x844px.
 
 ### PWA-04: Standard Eingabe
 ```
-Mobile detailed time entry form for construction workers.
-Top: back arrow, "Standard" title, date "Di, 28.10.2025".
-Time header card: "07:00 – 16:00 | Pause 0:30 | 8,5 h" compact row.
-Section "Tätigkeiten" with + button:
-  Each entry is a card with: text field (description), hours field, 
-  expandable material list (+ Material button, each material: name + quantity + unit).
-Section "Zulagen" with + button:
-  Each entry: text field + hours.
-Sticky bottom: "Summe: 8,5 h" + orange "Speichern" button.
-Swipe-to-delete on cards.
+Mobile "Standard" time entry for construction workers. Table-based, row by row.
+No Zulagen section. Pause is an activity with negative hours.
+Top: back arrow, "Standard" title, date "Di, 28.10.2025". Baustelle chip.
+Table rows alternating activity and material:
+- Activity row (bold): Von | Bis | Beschreibung | Stunden
+- Material row (indented, gray bg): MAT: Name | Menge | Einheit
+Example: 07:00-09:00 Moerteln 2h, MAT: Moertel 5 Sack, MAT: Naegel - ohne,
+09:00-09:30 Pause -0.5h, 09:30-12:00 Dachdecken 2.5h, MAT: Dachziegel 200 Stk.
+Buttons: "+ Taetigkeit" and "+ Material".
+Einheiten: Stk, m, m2, VE, ohne.
+Sticky bottom: Gesamtstunden + orange Speichern.
 Mobile 390x844px.
 ```
 
