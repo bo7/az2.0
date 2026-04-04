@@ -19,13 +19,15 @@ Im Claude Code Chat:
 ```
 /mcp
 ```
-Sollte "stitch" als verbundenen MCP-Server zeigen.
+Sollte zeigen: `stitch: https://stitch.googleapis.com/mcp (HTTP) - Connected`
 
-Falls nicht:
+Falls nicht verbunden, einmalig registrieren:
 ```bash
-export PATH="$HOME/google-cloud-sdk/bin:$PATH"
-gcloud auth application-default login
+claude mcp add stitch -s user --transport http https://stitch.googleapis.com/mcp \
+  --header "X-Goog-Api-Key: <STITCH_API_KEY>"
 ```
+
+Kein gcloud, kein OAuth noetig - laeuft direkt ueber API Key.
 
 ---
 
@@ -33,8 +35,8 @@ gcloud auth application-default login
 
 Im Claude Code Chat:
 ```
-Lies docs/STITCH_PROMPTS.md und initialisiere ein neues Stitch-Projekt 
-fuer az2.0 mit dem dort definierten Design-System. Erstelle eine DESIGN.md 
+Lies docs/STITCH_PROMPTS.md und initialisiere ein neues Stitch-Projekt
+fuer az2.0 mit dem dort definierten Design-System. Erstelle eine DESIGN.md
 im .stitch/ Ordner.
 ```
 
@@ -45,7 +47,7 @@ im .stitch/ Ordner.
 Einen nach dem anderen, Reihenfolge aus STITCH_PROMPTS.md:
 
 ```
-Generiere Screen PWA-01 (Login) mit dem Stitch MCP. 
+Generiere Screen PWA-01 (Login) mit dem Stitch MCP.
 Nutze den Prompt aus docs/STITCH_PROMPTS.md.
 Speichere den HTML-Code in designs/pwa/01-login.html
 ```
