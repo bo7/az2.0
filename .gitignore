@@ -1,0 +1,12 @@
+node_modules/
+.env
+.env.*
+!.env.example
+dist/
+build/
+*.log
+.DS_Store
+opensrc/
+__pycache__/
+*.pyc
+.venv/
