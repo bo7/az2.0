@@ -5,12 +5,11 @@ import { useSmartDefaults } from '@/hooks/useSmartDefaults';
 import { useTaetigkeitSuggestions } from '@/hooks/useTaetigkeitSuggestions';
 import { createZeiteintrag, getMyBaustellen } from '@/lib/firestore';
 import type { Baustelle, TaetigkeitPosition, Position } from '@/types';
-import BaustelleSelector from '@/components/form/BaustelleSelector';
 import TimeInput from '@/components/form/TimeInput';
 import TaetigkeitChips from '@/components/form/TaetigkeitChips';
 import SpeechFreeform from '@/components/form/SpeechFreeform';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ChevronDown, Keyboard, Mic } from 'lucide-react';
+import { ArrowLeft, Keyboard, Mic } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -91,7 +90,6 @@ export default function SuperEasy() {
   const [pauseChecked, setPauseChecked] = useState(true);
   const [pauseMinutes, setPauseMinutes] = useState(30);
   const [beschreibung, setBeschreibung] = useState(state.beschreibung ?? '');
-  const [selectorOpen, setSelectorOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [defaultsApplied, setDefaultsApplied] = useState(false);
 
@@ -143,11 +141,15 @@ export default function SuperEasy() {
     [von, bis, pauseChecked, pauseMinutes],
   );
 
-  const handleBaustelleSelect = useCallback((b: Baustelle) => {
-    setBaustelleId(b.id);
-    setBaustelleName(b.name);
-    setSelectorOpen(false);
-  }, []);
+  const handleBaustelleChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const id = e.target.value;
+      setBaustelleId(id || null);
+      const bs = baustellen.find((b) => b.id === id);
+      setBaustelleName(bs?.name ?? null);
+    },
+    [baustellen],
+  );
 
   const handleSave = useCallback(async () => {
     if (!mitarbeiter || !baustelleId) return;
@@ -294,6 +296,27 @@ export default function SuperEasy() {
       {/* Sprechen Mode */}
       {mode === 'sprechen' && (
         <div className="flex flex-1 flex-col p-4">
+          {/* Baustellen-Chips */}
+          <div className="mb-3 flex flex-wrap gap-2">
+            {baustellen.map((b) => (
+              <button
+                key={b.id}
+                type="button"
+                onClick={() => {
+                  setBaustelleId(b.id);
+                  setBaustelleName(b.name);
+                }}
+                className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                  baustelleId === b.id
+                    ? 'border-accent bg-accent text-white'
+                    : 'border-border bg-card text-muted-foreground'
+                }`}
+              >
+                {b.name}
+              </button>
+            ))}
+          </div>
+
           <SpeechFreeform
             baustellen={baustellen}
             defaultBaustelleId={baustelleId}
@@ -312,25 +335,23 @@ export default function SuperEasy() {
       {/* Schreiben Mode */}
       {mode === 'schreiben' && (
         <div className="flex flex-col gap-5 p-4">
-          {/* Baustelle Selector Chip */}
+          {/* Baustelle Dropdown */}
           <section>
-            <span className="mb-1 block text-sm font-medium text-muted-foreground">
+            <label className="mb-1 block text-sm font-medium text-muted-foreground">
               Baustelle
-            </span>
-            <button
-              type="button"
-              onClick={() => setSelectorOpen(true)}
-              className="flex h-14 w-full items-center justify-between rounded-xl border border-border bg-card px-4 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            </label>
+            <select
+              value={baustelleId ?? ''}
+              onChange={handleBaustelleChange}
+              className="h-14 w-full rounded-xl border border-input bg-background px-4 text-base font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             >
-              <span
-                className={`text-base font-medium ${
-                  baustelleName ? 'text-foreground' : 'text-muted-foreground'
-                }`}
-              >
-                {baustelleName ?? 'Baustelle auswaehlen...'}
-              </span>
-              <ChevronDown className="size-5 text-muted-foreground" />
-            </button>
+              <option value="">Baustelle auswaehlen...</option>
+              {baustellen.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
           </section>
 
           {/* Time Inputs */}
@@ -409,15 +430,6 @@ export default function SuperEasy() {
         </div>
       )}
 
-      {/* Baustelle Selector Overlay (Schreiben mode only) */}
-      {mode === 'schreiben' && (
-        <BaustelleSelector
-          open={selectorOpen}
-          onSelect={handleBaustelleSelect}
-          onClose={() => setSelectorOpen(false)}
-          selectedId={baustelleId ?? undefined}
-        />
-      )}
     </div>
   );
 }

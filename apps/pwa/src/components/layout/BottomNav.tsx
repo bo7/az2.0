@@ -1,10 +1,9 @@
 import { NavLink } from 'react-router-dom';
-import { Home, Calendar, Building2, User } from 'lucide-react';
+import { Home, Calendar, User } from 'lucide-react';
 
 const navItems = [
   { to: '/', label: 'Heute', icon: Home },
   { to: '/kalender', label: 'Kalender', icon: Calendar },
-  { to: '/baustellen', label: 'Baustellen', icon: Building2 },
   { to: '/profil', label: 'Profil', icon: User },
 ] as const;
 
