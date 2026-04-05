@@ -1,7 +1,22 @@
-// LLM API client -- calls OpenAI-compatible endpoint (mlx_lm.server on mac2)
+// LLM API client -- supports local MLX server and Google Gemini Flash
+//
+// Provider selection via VITE_LLM_PROVIDER:
+//   "local"  → mlx_lm.server on mac2 (default)
+//   "gemini" → Google Gemini Flash via OpenAI-compatible endpoint
 
-const LLM_API_URL = import.meta.env.VITE_LLM_API_URL ?? 'http://10.200.0.12:8899';
-// NOTE: Always use WireGuard address (10.200.0.x), never 0.0.0.0
+type LLMProvider = 'local' | 'gemini';
+
+const LLM_PROVIDER: LLMProvider =
+  (import.meta.env.VITE_LLM_PROVIDER as LLMProvider) ?? 'local';
+
+// Local MLX config
+const LOCAL_API_URL = import.meta.env.VITE_LLM_API_URL ?? 'http://10.200.0.12:8899';
+const LOCAL_MODEL = import.meta.env.VITE_LLM_MODEL ?? 'mlx-community/Llama-3.1-Nemotron-70B-Instruct-HF-8bit';
+
+// Gemini config (OpenAI-compatible endpoint)
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY ?? '';
+const GEMINI_MODEL = import.meta.env.VITE_GEMINI_MODEL ?? 'gemini-2.5-flash-preview-05-20';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/openai';
 
 interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
@@ -16,15 +31,35 @@ interface ChatCompletionResponse {
   }[];
 }
 
+function getProviderConfig(): { url: string; model: string; headers: Record<string, string> } {
+  if (LLM_PROVIDER === 'gemini') {
+    return {
+      url: `${GEMINI_API_URL}/chat/completions`,
+      model: GEMINI_MODEL,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${GEMINI_API_KEY}`,
+      },
+    };
+  }
+  return {
+    url: `${LOCAL_API_URL}/v1/chat/completions`,
+    model: LOCAL_MODEL,
+    headers: { 'Content-Type': 'application/json' },
+  };
+}
+
 export async function sendChatCompletion(
   messages: ChatMessage[],
   options?: { temperature?: number; maxTokens?: number },
 ): Promise<string> {
-  const response = await fetch(`${LLM_API_URL}/v1/chat/completions`, {
+  const config = getProviderConfig();
+
+  const response = await fetch(config.url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: config.headers,
     body: JSON.stringify({
-      model: import.meta.env.VITE_LLM_MODEL ?? 'mlx-community/Llama-3.1-Nemotron-70B-Instruct-HF-8bit',
+      model: config.model,
       messages,
       temperature: options?.temperature ?? 0.1,
       max_tokens: options?.maxTokens ?? 1024,
@@ -32,7 +67,7 @@ export async function sendChatCompletion(
   });
 
   if (!response.ok) {
-    throw new Error(`LLM API error: ${response.status}`);
+    throw new Error(`LLM API error (${LLM_PROVIDER}): ${response.status}`);
   }
 
   const data = (await response.json()) as ChatCompletionResponse;

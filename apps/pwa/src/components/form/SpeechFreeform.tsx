@@ -4,6 +4,7 @@ import type { ParsedZeiteintrag } from '@/lib/llmClient';
 import { getSpeechRecognition, hasSpeechSupport } from '@/lib/speechRecognition';
 import { useSpeechToEntry } from '@/hooks/useSpeechToEntry';
 import AvatarBubble from '@/components/form/AvatarBubble';
+import EntryChecklist from '@/components/form/EntryChecklist';
 import ParsedEntryCard from '@/components/form/ParsedEntryCard';
 import { Button } from '@/components/ui/button';
 import { Mic, Send } from 'lucide-react';
@@ -278,6 +279,14 @@ export default function SpeechFreeform({
         contextLine={avatarContext}
         isThinking={avatarThinking}
       />
+
+      {/* Live checklist -- shows what the LLM has captured so far */}
+      {(isProcessing || parsedEntries.length > 0 || conversation.length > 0) && (
+        <EntryChecklist
+          parsed={parsedEntries.length > 0 ? parsedEntries[parsedEntries.length - 1] : null}
+          isProcessing={isProcessing}
+        />
+      )}
 
       {/* Interim text while listening */}
       {isListening && interimText && (
