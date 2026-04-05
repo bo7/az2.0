@@ -18,46 +18,107 @@
       background: white;
       border-radius: 20px;
       padding: 48px 40px;
-      text-align: center;
-      width: 340px;
+      width: 360px;
       box-shadow: 0 4px 32px rgba(30,52,80,0.10);
     }
-    .avatar {
-      width: 110px;
-      height: 110px;
-      border-radius: 50%;
-      margin: 0 auto 28px;
-      display: block;
-    }
-    h1 {
-      font-size: 26px;
-      font-weight: 700;
-      color: #1e3450;
-      margin-bottom: 8px;
-    }
-    p {
-      font-size: 15px;
-      color: #667;
+    .logo {
+      text-align: center;
       margin-bottom: 32px;
     }
-    .badge {
-      display: inline-block;
+    .logo img {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+    }
+    .logo h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1e3450;
+      margin-top: 12px;
+    }
+    .logo p {
+      font-size: 13px;
+      color: #888;
+      margin-top: 4px;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: #444;
+      margin-bottom: 6px;
+    }
+    input {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid #dde3ec;
+      border-radius: 10px;
+      font-size: 15px;
+      color: #1e3450;
+      outline: none;
+      transition: border-color .2s;
+      margin-bottom: 18px;
+    }
+    input:focus { border-color: #1e3450; }
+    .btn {
+      width: 100%;
+      padding: 13px;
       background: #1e3450;
       color: white;
-      padding: 8px 22px;
-      border-radius: 24px;
-      font-size: 14px;
-      font-weight: 500;
-      letter-spacing: 0.3px;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s;
+      margin-top: 4px;
+    }
+    .btn:hover { background: #16293f; }
+    .btn:active { background: #0f1e2e; }
+    .error {
+      background: #fef2f2;
+      color: #dc2626;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 12px;
+      color: #aaa;
     }
   </style>
 </head>
 <body>
   <div class="card">
-    <img class="avatar" src="designs/pwa/avatar_zimmerer_mann.png" alt="az2.0 Avatar">
-    <h1>az2.0</h1>
-    <p>Zeiterfassung für Dachdecker &amp; Zimmerer</p>
-    <span class="badge">In Entwicklung</span>
+    <div class="logo">
+      <img src="designs/pwa/avatar_zimmerer_mann.png" alt="az2.0">
+      <h1>az2.0</h1>
+      <p>Zeiterfassung Dachdecker &amp; Zimmerer</p>
+    </div>
+    <div class="error" id="error">E-Mail oder Passwort falsch.</div>
+    <label for="email">E-Mail</label>
+    <input type="email" id="email" placeholder="name@firma.de" autocomplete="username">
+    <label for="password">Passwort</label>
+    <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
+    <button class="btn" onclick="login()">Anmelden</button>
+    <div class="footer">az2.0 &copy; 2026 · DAITA-CRAFTER</div>
   </div>
+  <script>
+    function login() {
+      const email = document.getElementById('email').value;
+      const pw = document.getElementById('password').value;
+      const err = document.getElementById('error');
+      err.style.display = 'none';
+      if (!email || !pw) { err.textContent = 'Bitte E-Mail und Passwort eingeben.'; err.style.display = 'block'; return; }
+      // Firebase Auth kommt hier rein
+      err.textContent = 'Firebase Auth noch nicht konfiguriert.';
+      err.style.display = 'block';
+    }
+    document.getElementById('password').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+  </script>
 </body>
 </html>
