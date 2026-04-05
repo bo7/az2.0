@@ -44,7 +44,7 @@ export default function Baustellen() {
   }, [baustellen, searchText]);
 
   const isStandard = (id: string) =>
-    mitarbeiter?.standardBaustelleId === id;
+    mitarbeiter?.einstellungen?.standardBaustelleId === id;
 
   if (loading) {
     return (

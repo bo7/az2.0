@@ -2,7 +2,8 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import type { User } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
 import { getMitarbeiter } from '@/lib/firestore';
 import type { Mitarbeiter } from '@/types';
 
@@ -25,7 +26,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (firebaseUser) {
         try {
-          const ma = await getMitarbeiter(firebaseUser.uid);
+          let ma = await getMitarbeiter(firebaseUser.uid);
+
+          // Auto-create mitarbeiter doc on first Google sign-in
+          if (!ma) {
+            const newMa = {
+              name: firebaseUser.displayName ?? firebaseUser.email ?? '',
+              email: firebaseUser.email ?? '',
+              rolle: 'mitarbeiter' as const,
+              aktiv: true,
+              einstellungen: {
+                bevorzugterModus: 'supereasy' as const,
+                pauseAbziehen: true,
+                pauseDauer: '00:30',
+                standardBaustelleId: null,
+              },
+              erstelltAm: serverTimestamp(),
+            };
+            await setDoc(doc(db, 'mitarbeiter', firebaseUser.uid), newMa);
+            ma = await getMitarbeiter(firebaseUser.uid);
+          }
+
           setMitarbeiter(ma);
         } catch {
           setMitarbeiter(null);

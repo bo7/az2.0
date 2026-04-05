@@ -10,6 +10,7 @@ import Kalender from '@/pages/Kalender';
 import Baustellen from '@/pages/Baustellen';
 import Profil from '@/pages/Profil';
 import Abwesenheit from '@/pages/Abwesenheit';
+import EintragBearbeiten from '@/pages/EintragBearbeiten';
 
 function ProtectedPage({ children }: { children: React.ReactNode }) {
   return (
@@ -31,6 +32,7 @@ function App() {
           <Route path="/kalender" element={<ProtectedPage><Kalender /></ProtectedPage>} />
           <Route path="/baustellen" element={<ProtectedPage><Baustellen /></ProtectedPage>} />
           <Route path="/profil" element={<ProtectedPage><Profil /></ProtectedPage>} />
+          <Route path="/eintrag/:id" element={<ProtectedPage><EintragBearbeiten /></ProtectedPage>} />
           <Route path="/abwesenheit" element={<ProtectedPage><Abwesenheit /></ProtectedPage>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

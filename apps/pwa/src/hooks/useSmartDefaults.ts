@@ -93,7 +93,7 @@ export function useSmartDefaults(): UseSmartDefaultsResult {
         if (cancelled) return;
 
         // Determine baustelleId
-        const standardId = mitarbeiter!.standardBaustelleId;
+        const standardId = mitarbeiter!.einstellungen?.standardBaustelleId ?? null;
         const yesterday = yesterdayDate();
         const yesterdayEntries = entries.filter((e) => e.datum === yesterday);
         const yesterdayBaustelle =

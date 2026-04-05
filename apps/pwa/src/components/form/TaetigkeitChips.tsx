@@ -55,13 +55,15 @@ export default function TaetigkeitChips({
 }: TaetigkeitChipsProps) {
   const [recording, setRecording] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const valueRef = useRef(value);
+  valueRef.current = value;
 
   const hasSpeech = getSpeechRecognition() !== null;
 
-  const handleMicClick = useCallback(() => {
+  // Toggle: first tap = start, second tap = stop
+  const handleMicToggle = useCallback(() => {
     if (recording && recognitionRef.current) {
       recognitionRef.current.stop();
-      setRecording(false);
       return;
     }
 
@@ -70,16 +72,17 @@ export default function TaetigkeitChips({
 
     const recognition = new SRConstructor();
     recognition.lang = 'de-DE';
-    recognition.continuous = false;
+    recognition.continuous = true;
     recognition.interimResults = false;
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       const results = event.results;
       if (results.length > 0) {
-        const firstResult = results[0];
-        if (firstResult && firstResult.length > 0) {
-          const transcript = firstResult[0].transcript;
-          onChange(transcript);
+        const lastResult = results[results.length - 1];
+        if (lastResult && lastResult.length > 0) {
+          const transcript = lastResult[0].transcript;
+          const current = valueRef.current.trim();
+          onChange(current ? current + ', ' + transcript : transcript);
         }
       }
     };
@@ -141,12 +144,16 @@ export default function TaetigkeitChips({
         {hasSpeech && (
           <button
             type="button"
-            onClick={handleMicClick}
-            className="absolute right-2 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label={recording ? 'Spracherkennung stoppen' : 'Spracheingabe'}
+            onClick={handleMicToggle}
+            className={`absolute right-2 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+              recording
+                ? 'bg-accent text-white'
+                : 'text-muted-foreground hover:bg-muted'
+            }`}
+            aria-label={recording ? 'Spracherkennung stoppen' : 'Spracheingabe starten'}
           >
             <Mic
-              className={`size-5 ${recording ? 'animate-pulse text-accent' : ''}`}
+              className={`size-5 ${recording ? 'animate-pulse' : ''}`}
             />
           </button>
         )}

@@ -58,7 +58,7 @@ export default function BaustelleSelector({
 
   if (!open) return null;
 
-  const standardBaustelleId = mitarbeiter?.standardBaustelleId ?? null;
+  const standardBaustelleId = mitarbeiter?.einstellungen?.standardBaustelleId ?? null;
 
   return (
     <div

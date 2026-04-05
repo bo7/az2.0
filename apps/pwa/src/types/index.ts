@@ -3,11 +3,15 @@ import type { Timestamp } from 'firebase/firestore';
 // --- Rollen ---
 export type Rolle = 'mitarbeiter' | 'vorarbeiter' | 'admin';
 
+// --- Modi ---
+export type Modus = 'supereasy' | 'standard';
+
 // --- Mitarbeiter-Einstellungen ---
 export interface MitarbeiterEinstellungen {
+  bevorzugterModus: Modus;
   pauseAbziehen: boolean;
   pauseDauer: string; // "00:30"
-  wochenstundenSoll: number;
+  standardBaustelleId: string | null;
 }
 
 // --- mitarbeiter/{uid} ---
@@ -18,7 +22,6 @@ export interface Mitarbeiter {
   rolle: Rolle;
   aktiv: boolean;
   einstellungen: MitarbeiterEinstellungen;
-  standardBaustelleId: string | null;
   erstelltAm: Timestamp;
 }
 
@@ -70,7 +73,6 @@ export interface MaterialPosition {
 export type Position = TaetigkeitPosition | MaterialPosition;
 
 // --- zeiteintraege/{id} ---
-export type Modus = 'supereasy' | 'standard';
 export type ZeiteintragStatus = 'entwurf' | 'erfasst' | 'freigegeben';
 
 export interface Zeiteintrag {

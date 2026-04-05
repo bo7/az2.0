@@ -84,6 +84,14 @@ export async function getZeiteintraege(
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Zeiteintrag);
 }
 
+export async function getZeiteintragById(
+  id: string,
+): Promise<Zeiteintrag | null> {
+  const snap = await getDoc(doc(db, 'zeiteintraege', id));
+  if (!snap.exists()) return null;
+  return { id: snap.id, ...snap.data() } as Zeiteintrag;
+}
+
 export async function getZeiteintraegeForDate(
   uid: string,
   datum: string,

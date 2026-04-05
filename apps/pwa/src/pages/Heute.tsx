@@ -113,11 +113,6 @@ export default function Heute() {
   const pauseDauer =
     mitarbeiter?.einstellungen.pauseDauer ?? '00:30';
 
-  // Determine which form to navigate to
-  const navigateToForm = useCallback(() => {
-    navigate('/supereasy');
-  }, [navigate]);
-
   // "Passt so" handler: create entry from smart defaults
   const handlePasstSo = useCallback(async () => {
     if (!defaults || !defaults.baustelleId || !mitarbeiter) return;
@@ -213,7 +208,7 @@ export default function Heute() {
               key={entry.id}
               eintrag={entry}
               baustelleName={baustelleMap.get(entry.baustelleId) ?? 'Unbekannt'}
-              onClick={() => navigate(`/supereasy?edit=${entry.id}`)}
+              onClick={() => navigate(`/eintrag/${entry.id}`)}
             />
           ))}
 
@@ -243,15 +238,24 @@ export default function Heute() {
             </Button>
           </div>
 
-          {/* FAB */}
-          <button
-            type="button"
-            onClick={navigateToForm}
-            className="fixed bottom-20 right-4 z-10 flex size-14 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-lg transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label="Neuer Eintrag"
-          >
-            <Plus className="size-7" />
-          </button>
+          {/* New entry buttons */}
+          <div className="mt-4 flex gap-3">
+            <Button
+              className="h-12 flex-1 rounded-xl bg-accent text-base font-bold text-accent-foreground hover:bg-accent/90 active:bg-accent/80"
+              onClick={() => navigate('/supereasy')}
+            >
+              <Plus className="mr-1 size-5" />
+              SuperEasy
+            </Button>
+            <Button
+              variant="outline"
+              className="h-12 flex-1 rounded-xl text-base font-semibold"
+              onClick={() => navigate('/standard')}
+            >
+              <Plus className="mr-1 size-5" />
+              Standard
+            </Button>
+          </div>
         </div>
       )}
 
@@ -326,12 +330,21 @@ export default function Heute() {
           <p className="text-center text-lg text-muted-foreground">
             Noch keine Eintraege. Starte jetzt!
           </p>
-          <Button
-            className="h-14 w-full max-w-xs rounded-xl bg-accent text-xl font-bold text-accent-foreground hover:bg-accent/90 active:bg-accent/80"
-            onClick={navigateToForm}
-          >
-            Eintrag erstellen
-          </Button>
+          <div className="flex w-full max-w-xs flex-col gap-3">
+            <Button
+              className="h-14 w-full rounded-xl bg-accent text-xl font-bold text-accent-foreground hover:bg-accent/90 active:bg-accent/80"
+              onClick={() => navigate('/supereasy')}
+            >
+              SuperEasy Eintrag
+            </Button>
+            <Button
+              variant="outline"
+              className="h-14 w-full rounded-xl text-lg font-semibold"
+              onClick={() => navigate('/standard')}
+            >
+              Standard Eintrag
+            </Button>
+          </div>
         </div>
       )}
     </div>

@@ -5,10 +5,11 @@ import {
   getZeiteintraege,
   getAbwesenheiten,
   getGlobaleEinstellungen,
+  getMyBaustellen,
 } from '@/lib/firestore';
-import type { Zeiteintrag, Abwesenheit, GlobaleEinstellungen } from '@/types';
+import type { Zeiteintrag, Abwesenheit, GlobaleEinstellungen, Baustelle } from '@/types';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -116,8 +117,10 @@ export default function Kalender() {
   const { mitarbeiter } = useAuth();
 
   const [viewDate, setViewDate] = useState(() => new Date());
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [entries, setEntries] = useState<Zeiteintrag[]>([]);
   const [absences, setAbsences] = useState<Abwesenheit[]>([]);
+  const [baustellen, setBaustellen] = useState<Baustelle[]>([]);
   const [einstellungen, setEinstellungen] = useState<GlobaleEinstellungen | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -138,15 +141,17 @@ export default function Kalender() {
     async function load() {
       setLoading(true);
       try {
-        const [ze, ab, ge] = await Promise.all([
+        const [ze, ab, ge, bs] = await Promise.all([
           getZeiteintraege(mitarbeiter!.uid, rangeVon, rangeBis),
           getAbwesenheiten(mitarbeiter!.uid, rangeVon, rangeBis),
           getGlobaleEinstellungen(),
+          getMyBaustellen(mitarbeiter!.uid),
         ]);
         if (cancelled) return;
         setEntries(ze);
         setAbsences(ab);
         setEinstellungen(ge);
+        setBaustellen(bs);
       } catch {
         // Silently handle
       } finally {
@@ -217,10 +222,21 @@ export default function Kalender() {
 
   const handleDayTap = useCallback(
     (date: Date) => {
-      navigate('/supereasy', { state: { datum: toISO(date) } });
+      const dateStr = toISO(date);
+      setSelectedDate((prev) => (prev === dateStr ? null : dateStr));
     },
-    [navigate],
+    [],
   );
+
+  // Entries for the selected date
+  const selectedEntries = useMemo(() => {
+    if (!selectedDate) return [];
+    return entries.filter((e) => e.datum === selectedDate);
+  }, [entries, selectedDate]);
+
+  const baustelleNames = useMemo(() => {
+    return new Map(baustellen.map((b) => [b.id, b.name]));
+  }, [baustellen]);
 
   const statusColor: Record<DayStatus, string> = {
     green: 'bg-[#16a34a]',
@@ -337,6 +353,73 @@ export default function Kalender() {
           {formatHours(weeklySoll)} Stunden
         </p>
       </div>
+
+      {/* Selected day entries */}
+      {selectedDate && (
+        <div className="mt-4">
+          <h2 className="mb-2 text-base font-bold text-foreground">
+            {new Intl.DateTimeFormat('de-DE', {
+              weekday: 'long',
+              day: 'numeric',
+              month: 'long',
+            }).format(new Date(selectedDate + 'T00:00:00'))}
+          </h2>
+
+          {selectedEntries.length === 0 ? (
+            <div className="flex flex-col gap-2">
+              <p className="text-sm text-muted-foreground">Keine Eintraege.</p>
+              <Button
+                className="h-12 rounded-xl bg-accent text-base font-semibold text-accent-foreground"
+                onClick={() =>
+                  navigate('/supereasy', { state: { datum: selectedDate } })
+                }
+              >
+                Eintrag erstellen
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {selectedEntries.map((entry) => {
+                const taetigkeiten = entry.positionen.filter(
+                  (p) => p.typ === 'taetigkeit' && p.beschreibung.toLowerCase() !== 'pause',
+                );
+                return (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    onClick={() => navigate(`/eintrag/${entry.id}`)}
+                    className="flex items-center justify-between rounded-xl border border-border bg-card p-4 text-left shadow-sm transition-colors hover:bg-muted"
+                  >
+                    <div className="flex-1">
+                      <p className="text-base font-bold text-foreground">
+                        {baustelleNames.get(entry.baustelleId) ?? 'Unbekannt'}
+                      </p>
+                      {taetigkeiten.map((t, i) => (
+                        <p key={i} className="text-sm text-muted-foreground">
+                          {(t as import('@/types').TaetigkeitPosition).beschreibung}
+                        </p>
+                      ))}
+                    </div>
+                    <span className="ml-3 text-lg font-bold text-accent">
+                      {formatHours(entry.gesamtstunden)} h
+                    </span>
+                  </button>
+                );
+              })}
+              <Button
+                variant="outline"
+                className="h-12 rounded-xl text-base"
+                onClick={() =>
+                  navigate('/supereasy', { state: { datum: selectedDate } })
+                }
+              >
+                <Plus className="mr-1 size-4" />
+                Weiterer Eintrag
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Legend */}
       <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-xs text-muted-foreground">

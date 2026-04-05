@@ -51,9 +51,10 @@ export default function Profil() {
   // Initialize from mitarbeiter
   useEffect(() => {
     if (!mitarbeiter) return;
-    setSelectedBaustelleId(mitarbeiter.standardBaustelleId);
-    setPauseAbziehen(mitarbeiter.einstellungen.pauseAbziehen);
-    setPauseDauer(mitarbeiter.einstellungen.pauseDauer);
+    setSelectedBaustelleId(mitarbeiter.einstellungen?.standardBaustelleId ?? null);
+    setPauseAbziehen(mitarbeiter.einstellungen?.pauseAbziehen ?? true);
+    setPauseDauer(mitarbeiter.einstellungen?.pauseDauer ?? '00:30');
+    setEingabemodus(mitarbeiter.einstellungen?.bevorzugterModus ?? 'supereasy');
   }, [mitarbeiter]);
 
   // Load baustellen
@@ -124,14 +125,14 @@ export default function Profil() {
 
     try {
       const einstellungen: MitarbeiterEinstellungen = {
+        bevorzugterModus: eingabemodus,
         pauseAbziehen,
         pauseDauer,
-        wochenstundenSoll: mitarbeiter.einstellungen.wochenstundenSoll,
+        standardBaustelleId: selectedBaustelleId,
       };
 
       await updateMitarbeiter(mitarbeiter.uid, {
         einstellungen,
-        standardBaustelleId: selectedBaustelleId,
       });
       setSaveMessage('Einstellungen gespeichert.');
     } catch {
@@ -152,7 +153,8 @@ export default function Profil() {
     return (
       pauseAbziehen !== mitarbeiter.einstellungen.pauseAbziehen ||
       pauseDauer !== mitarbeiter.einstellungen.pauseDauer ||
-      selectedBaustelleId !== mitarbeiter.standardBaustelleId
+      selectedBaustelleId !== (mitarbeiter.einstellungen?.standardBaustelleId ?? null) ||
+      eingabemodus !== (mitarbeiter.einstellungen?.bevorzugterModus ?? 'supereasy')
     );
   }, [mitarbeiter, pauseAbziehen, pauseDauer, selectedBaustelleId]);
 

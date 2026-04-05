@@ -3,13 +3,14 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSmartDefaults } from '@/hooks/useSmartDefaults';
 import { useTaetigkeitSuggestions } from '@/hooks/useTaetigkeitSuggestions';
-import { createZeiteintrag } from '@/lib/firestore';
+import { createZeiteintrag, getMyBaustellen } from '@/lib/firestore';
 import type { Baustelle, TaetigkeitPosition, Position } from '@/types';
 import BaustelleSelector from '@/components/form/BaustelleSelector';
 import TimeInput from '@/components/form/TimeInput';
 import TaetigkeitChips from '@/components/form/TaetigkeitChips';
+import SpeechFreeform from '@/components/form/SpeechFreeform';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ChevronDown } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Keyboard, Mic } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -65,6 +66,8 @@ function formatStunden(stunden: number): string {
 // Component
 // ---------------------------------------------------------------------------
 
+type InputMode = 'schreiben' | 'sprechen';
+
 export default function SuperEasy() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -73,7 +76,10 @@ export default function SuperEasy() {
 
   const state = (location.state ?? {}) as LocationState;
 
-  // Form state
+  const [mode, setMode] = useState<InputMode>('schreiben');
+  const [baustellen, setBaustellen] = useState<Baustelle[]>([]);
+
+  // Form state (Schreiben mode)
   const [baustelleId, setBaustelleId] = useState<string | null>(
     state.baustelleId ?? null,
   );
@@ -91,7 +97,17 @@ export default function SuperEasy() {
 
   const datum = state.datum ?? todayString();
 
-  // Apply smart defaults once loaded (only if no location state was provided)
+  // Load baustellen for speech wizard
+  useEffect(() => {
+    if (!mitarbeiter) return;
+    let cancelled = false;
+    getMyBaustellen(mitarbeiter.uid).then(list => {
+      if (!cancelled) setBaustellen(list);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [mitarbeiter]);
+
+  // Apply smart defaults once loaded
   useEffect(() => {
     if (defaultsApplied || defaultsLoading || !defaults) return;
 
@@ -109,7 +125,6 @@ export default function SuperEasy() {
       setBeschreibung(defaults.beschreibung);
     }
 
-    // Apply pause settings from mitarbeiter
     if (mitarbeiter?.einstellungen) {
       setPauseChecked(mitarbeiter.einstellungen.pauseAbziehen);
       const [ph, pm] = mitarbeiter.einstellungen.pauseDauer
@@ -141,7 +156,6 @@ export default function SuperEasy() {
     try {
       const positionen: Position[] = [];
 
-      // Main taetigkeit position
       const mainPosition: TaetigkeitPosition = {
         typ: 'taetigkeit',
         von,
@@ -151,7 +165,6 @@ export default function SuperEasy() {
       };
       positionen.push(mainPosition);
 
-      // Add pause position if checked
       if (pauseChecked && pauseMinutes > 0) {
         const pausePosition: TaetigkeitPosition = {
           typ: 'taetigkeit',
@@ -181,21 +194,44 @@ export default function SuperEasy() {
       setSubmitting(false);
     }
   }, [
-    mitarbeiter,
-    baustelleId,
-    von,
-    bis,
-    beschreibung,
-    pauseChecked,
-    pauseMinutes,
-    gesamtstunden,
-    datum,
-    navigate,
+    mitarbeiter, baustelleId, von, bis, beschreibung,
+    pauseChecked, pauseMinutes, gesamtstunden, datum, navigate,
   ]);
+
+  // Speech freeform save handler (multiple entries)
+  const handleSpeechSave = useCallback(async (entries: {
+    baustelleId: string;
+    von: string;
+    bis: string;
+    positionen: Position[];
+    gesamtstunden: number;
+  }[]) => {
+    if (!mitarbeiter) return;
+
+    setSubmitting(true);
+    try {
+      for (const data of entries) {
+        await createZeiteintrag({
+          mitarbeiterId: mitarbeiter.uid,
+          baustelleId: data.baustelleId,
+          datum,
+          modus: 'supereasy',
+          gesamtstunden: data.gesamtstunden,
+          positionen: data.positionen,
+          status: 'entwurf',
+          synchronisiert: false,
+        });
+      }
+      navigate('/');
+    } catch {
+      // Handle error silently
+    } finally {
+      setSubmitting(false);
+    }
+  }, [mitarbeiter, datum, navigate]);
 
   const canSave = baustelleId !== null && gesamtstunden > 0;
 
-  // Loading state
   if (defaultsLoading) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center p-4">
@@ -227,110 +263,161 @@ export default function SuperEasy() {
         </div>
       </header>
 
-      <div className="flex flex-col gap-5 p-4">
-        {/* Baustelle Selector Chip */}
-        <section>
-          <span className="mb-1 block text-sm font-medium text-muted-foreground">
-            Baustelle
-          </span>
-          <button
-            type="button"
-            onClick={() => setSelectorOpen(true)}
-            className="flex h-14 w-full items-center justify-between rounded-xl border border-border bg-card px-4 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <span
-              className={`text-base font-medium ${
-                baustelleName ? 'text-foreground' : 'text-muted-foreground'
-              }`}
-            >
-              {baustelleName ?? 'Baustelle auswaehlen...'}
-            </span>
-            <ChevronDown className="size-5 text-muted-foreground" />
-          </button>
-        </section>
-
-        {/* Time Inputs */}
-        <section className="grid grid-cols-2 gap-4">
-          <TimeInput label="Von" value={von} onChange={setVon} />
-          <TimeInput label="Bis" value={bis} onChange={setBis} />
-        </section>
-
-        {/* Pause Row */}
-        <section className="flex items-center gap-4">
-          <label className="flex min-h-[48px] items-center gap-3">
-            <input
-              type="checkbox"
-              checked={pauseChecked}
-              onChange={(e) => setPauseChecked(e.target.checked)}
-              className="size-5 rounded border-input accent-accent"
-            />
-            <span className="text-base text-foreground">Pause abziehen</span>
-          </label>
-
-          {pauseChecked && (
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setPauseMinutes(30)}
-                className={`min-h-[40px] rounded-full border px-4 py-1 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                  pauseMinutes === 30
-                    ? 'border-accent bg-accent text-white'
-                    : 'border-border bg-card text-foreground hover:bg-muted'
-                }`}
-              >
-                0:30
-              </button>
-              <button
-                type="button"
-                onClick={() => setPauseMinutes(60)}
-                className={`min-h-[40px] rounded-full border px-4 py-1 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                  pauseMinutes === 60
-                    ? 'border-accent bg-accent text-white'
-                    : 'border-border bg-card text-foreground hover:bg-muted'
-                }`}
-              >
-                1:00
-              </button>
-            </div>
-          )}
-        </section>
-
-        {/* Taetigkeit */}
-        <section>
-          <span className="mb-2 block text-sm font-medium text-muted-foreground">
-            Taetigkeit
-          </span>
-          <TaetigkeitChips
-            suggestions={suggestions}
-            value={beschreibung}
-            onChange={setBeschreibung}
-          />
-        </section>
-
-        {/* Summary */}
-        <section className="rounded-xl border border-border bg-card p-4">
-          <p className="text-center text-lg font-bold text-foreground">
-            Gesamtstunden: {formatStunden(gesamtstunden)} h
-          </p>
-        </section>
-
-        {/* Save Button */}
-        <Button
-          className="h-14 w-full rounded-xl bg-accent text-lg font-bold text-accent-foreground hover:bg-accent/90 active:bg-accent/80"
-          onClick={handleSave}
-          disabled={!canSave || submitting}
+      {/* Mode Toggle */}
+      <div className="flex gap-1 border-b border-border bg-muted/50 p-2">
+        <button
+          type="button"
+          onClick={() => setMode('schreiben')}
+          className={`flex h-11 flex-1 items-center justify-center gap-2 rounded-lg text-base font-medium transition-colors ${
+            mode === 'schreiben'
+              ? 'bg-card text-foreground shadow-sm'
+              : 'text-muted-foreground'
+          }`}
         >
-          {submitting ? 'Wird gespeichert...' : 'Speichern'}
-        </Button>
+          <Keyboard className="size-4" />
+          Schreiben
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode('sprechen')}
+          className={`flex h-11 flex-1 items-center justify-center gap-2 rounded-lg text-base font-medium transition-colors ${
+            mode === 'sprechen'
+              ? 'bg-card text-foreground shadow-sm'
+              : 'text-muted-foreground'
+          }`}
+        >
+          <Mic className="size-4" />
+          Sprechen
+        </button>
       </div>
 
-      {/* Baustelle Selector Overlay */}
-      <BaustelleSelector
-        open={selectorOpen}
-        onSelect={handleBaustelleSelect}
-        onClose={() => setSelectorOpen(false)}
-        selectedId={baustelleId ?? undefined}
-      />
+      {/* Sprechen Mode */}
+      {mode === 'sprechen' && (
+        <div className="flex flex-1 flex-col p-4">
+          <SpeechFreeform
+            baustellen={baustellen}
+            defaultBaustelleId={baustelleId}
+            defaultBaustelleName={baustelleName}
+            defaultVon={von}
+            defaultBis={bis}
+            datum={datum}
+            pauseMinutes={pauseMinutes}
+            taetigkeitenKatalog={[]}
+            onSave={handleSpeechSave}
+            onCancel={() => setMode('schreiben')}
+          />
+        </div>
+      )}
+
+      {/* Schreiben Mode */}
+      {mode === 'schreiben' && (
+        <div className="flex flex-col gap-5 p-4">
+          {/* Baustelle Selector Chip */}
+          <section>
+            <span className="mb-1 block text-sm font-medium text-muted-foreground">
+              Baustelle
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectorOpen(true)}
+              className="flex h-14 w-full items-center justify-between rounded-xl border border-border bg-card px-4 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <span
+                className={`text-base font-medium ${
+                  baustelleName ? 'text-foreground' : 'text-muted-foreground'
+                }`}
+              >
+                {baustelleName ?? 'Baustelle auswaehlen...'}
+              </span>
+              <ChevronDown className="size-5 text-muted-foreground" />
+            </button>
+          </section>
+
+          {/* Time Inputs */}
+          <section className="grid grid-cols-2 gap-4">
+            <TimeInput label="Von" value={von} onChange={setVon} />
+            <TimeInput label="Bis" value={bis} onChange={setBis} />
+          </section>
+
+          {/* Pause Row */}
+          <section className="flex items-center gap-4">
+            <label className="flex min-h-[48px] items-center gap-3">
+              <input
+                type="checkbox"
+                checked={pauseChecked}
+                onChange={(e) => setPauseChecked(e.target.checked)}
+                className="size-5 rounded border-input accent-accent"
+              />
+              <span className="text-base text-foreground">Pause abziehen</span>
+            </label>
+
+            {pauseChecked && (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPauseMinutes(30)}
+                  className={`min-h-[40px] rounded-full border px-4 py-1 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                    pauseMinutes === 30
+                      ? 'border-accent bg-accent text-white'
+                      : 'border-border bg-card text-foreground hover:bg-muted'
+                  }`}
+                >
+                  0:30
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPauseMinutes(60)}
+                  className={`min-h-[40px] rounded-full border px-4 py-1 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                    pauseMinutes === 60
+                      ? 'border-accent bg-accent text-white'
+                      : 'border-border bg-card text-foreground hover:bg-muted'
+                  }`}
+                >
+                  1:00
+                </button>
+              </div>
+            )}
+          </section>
+
+          {/* Taetigkeit */}
+          <section>
+            <span className="mb-2 block text-sm font-medium text-muted-foreground">
+              Taetigkeit
+            </span>
+            <TaetigkeitChips
+              suggestions={suggestions}
+              value={beschreibung}
+              onChange={setBeschreibung}
+            />
+          </section>
+
+          {/* Summary */}
+          <section className="rounded-xl border border-border bg-card p-4">
+            <p className="text-center text-lg font-bold text-foreground">
+              Gesamtstunden: {formatStunden(gesamtstunden)} h
+            </p>
+          </section>
+
+          {/* Save Button */}
+          <Button
+            className="h-14 w-full rounded-xl bg-accent text-lg font-bold text-accent-foreground hover:bg-accent/90 active:bg-accent/80"
+            onClick={handleSave}
+            disabled={!canSave || submitting}
+          >
+            {submitting ? 'Wird gespeichert...' : 'Speichern'}
+          </Button>
+        </div>
+      )}
+
+      {/* Baustelle Selector Overlay (Schreiben mode only) */}
+      {mode === 'schreiben' && (
+        <BaustelleSelector
+          open={selectorOpen}
+          onSelect={handleBaustelleSelect}
+          onClose={() => setSelectorOpen(false)}
+          selectedId={baustelleId ?? undefined}
+        />
+      )}
     </div>
   );
 }
