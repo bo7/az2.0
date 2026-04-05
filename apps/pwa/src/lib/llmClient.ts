@@ -67,6 +67,9 @@ export async function sendChatCompletion(
 ): Promise<string> {
   const config = getProviderConfig();
 
+  // Gemini 3 uses internal thinking tokens — needs more headroom
+  const defaultMaxTokens = LLM_PROVIDER === 'gemini' ? 4096 : 1024;
+
   const response = await fetch(config.url, {
     method: 'POST',
     headers: config.headers,
@@ -74,7 +77,7 @@ export async function sendChatCompletion(
       model: config.model,
       messages,
       temperature: options?.temperature ?? 0.1,
-      max_tokens: options?.maxTokens ?? 1024,
+      max_tokens: options?.maxTokens ?? defaultMaxTokens,
     }),
   });
 

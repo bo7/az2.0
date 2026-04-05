@@ -2,6 +2,19 @@ import { useState, useCallback, useRef } from 'react';
 import { parseZeiteintrag } from '@/lib/llmClient';
 import type { ParsedZeiteintrag } from '@/lib/llmClient';
 
+function speak(text: string) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.lang = 'de-DE';
+  utt.rate = 1.1;
+  // Prefer a German voice if available
+  const voices = window.speechSynthesis.getVoices();
+  const deVoice = voices.find((v) => v.lang.startsWith('de'));
+  if (deVoice) utt.voice = deVoice;
+  window.speechSynthesis.speak(utt);
+}
+
 interface ConversationMessage {
   role: 'user' | 'assistant';
   text: string;
@@ -62,9 +75,11 @@ export function useSpeechToEntry(
           setFollowUpQuestion(null);
           historyRef.current = []; // Reset for next entry
 
+          const msg = 'Eintrag erfasst. Noch weitere?';
+          speak(msg);
           setConversation((prev) => [
             ...prev,
-            { role: 'assistant', text: 'Eintrag erfasst. Noch weitere?' },
+            { role: 'assistant', text: msg },
           ]);
         } else if (result.followUpQuestion) {
           setFollowUpQuestion(result.followUpQuestion);
@@ -73,6 +88,7 @@ export function useSpeechToEntry(
             content: result.followUpQuestion,
           });
 
+          speak(result.followUpQuestion);
           setConversation((prev) => [
             ...prev,
             { role: 'assistant', text: result.followUpQuestion! },
@@ -82,9 +98,11 @@ export function useSpeechToEntry(
         const msg =
           e instanceof Error ? e.message : 'Verbindungsproblem zum Server';
         setError(msg);
+        const errText = 'Entschuldigung, da ist etwas schiefgelaufen. Bitte nochmal versuchen.';
+        speak(errText);
         setConversation((prev) => [
           ...prev,
-          { role: 'assistant', text: `Fehler: ${msg}. Bitte nochmal versuchen.` },
+          { role: 'assistant', text: errText },
         ]);
       } finally {
         setIsProcessing(false);

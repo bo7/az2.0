@@ -124,13 +124,20 @@ export default function SpeechFreeform({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<import('@/lib/speechRecognition').SpeechRecognitionInstance | null>(null);
   const wantListeningRef = useRef(false);
-  const processedFinalCountRef = useRef(0);
 
   const hasSpeech = hasSpeechSupport();
 
   const startSession = useCallback(() => {
     const SR = getSpeechRecognition();
-    if (!SR) return;
+    if (!SR || !wantListeningRef.current) return;
+
+    // Always create a fresh instance — reusing the same object after onend causes
+    // mobile browsers to re-emit the previous transcript (duplicate words)
+    if (recognitionRef.current) {
+      recognitionRef.current.onend = null;
+      recognitionRef.current.onerror = null;
+      recognitionRef.current.onresult = null;
+    }
 
     const rec = new SR();
     rec.lang = 'de-DE';
@@ -144,12 +151,9 @@ export default function SpeechFreeform({
         if (!result || result.length === 0) continue;
         const isFinal = (event.results[i] as unknown as { isFinal: boolean }).isFinal;
         if (isFinal) {
-          if (i >= processedFinalCountRef.current) {
-            const transcript = result[0].transcript.trim();
-            if (transcript) {
-              setInputText((prev) => (prev ? prev + ' ' + transcript : transcript));
-            }
-            processedFinalCountRef.current = i + 1;
+          const transcript = result[0].transcript.trim();
+          if (transcript) {
+            setInputText((prev) => (prev ? prev + ' ' + transcript : transcript));
           }
         } else {
           interim += result[0].transcript;
@@ -160,15 +164,9 @@ export default function SpeechFreeform({
 
     rec.onend = () => {
       setInterimText('');
-      // Auto-restart on all platforms — mobile browsers stop after silence
-      if (wantListeningRef.current && recognitionRef.current === rec) {
-        processedFinalCountRef.current = 0;
-        try {
-          rec.start();
-        } catch {
-          setIsListening(false);
-          recognitionRef.current = null;
-        }
+      if (wantListeningRef.current) {
+        // Create a new instance next restart — avoids duplicate transcript bug
+        setTimeout(() => startSession(), 100);
       } else {
         setIsListening(false);
         recognitionRef.current = null;
@@ -177,7 +175,7 @@ export default function SpeechFreeform({
 
     rec.onerror = (event: Event) => {
       const e = event as unknown as { error: string };
-      if (e.error === 'no-speech') return; // normal after silence, onend auto-restarts
+      if (e.error === 'no-speech') return; // normal, onend fires and restarts
       if (e.error === 'aborted') return;   // manual stop
       setIsListening(false);
       wantListeningRef.current = false;
@@ -185,7 +183,6 @@ export default function SpeechFreeform({
     };
 
     recognitionRef.current = rec;
-    processedFinalCountRef.current = 0;
     rec.start();
   }, []);
 
