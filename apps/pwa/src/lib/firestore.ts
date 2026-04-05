@@ -60,7 +60,7 @@ export async function getMyBaustellen(uid: string): Promise<Baustelle[]> {
   // Filter out closed Baustellen (bis is set and in the past).
   const today = new Date().toISOString().slice(0, 10);
   return Array.from(map.values()).filter(
-    (b) => b.bis === null || b.bis >= today,
+    (b) => !b.bis || b.bis >= today,
   );
 }
 
