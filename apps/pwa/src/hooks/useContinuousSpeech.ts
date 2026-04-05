@@ -23,6 +23,8 @@ interface UseContinuousSpeechReturn {
   resetTranscript: () => void;
 }
 
+const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
 export function useContinuousSpeech(
   options?: UseContinuousSpeechOptions,
 ): UseContinuousSpeechReturn {
@@ -38,7 +40,7 @@ export function useContinuousSpeech(
   const lastResultTimeRef = useRef(0);
   const silenceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const transcriptRef = useRef('');
-  const processedIndexRef = useRef(0);
+  const wantListeningRef = useRef(false);
 
   const clearSilenceTimer = useCallback(() => {
     if (silenceTimerRef.current) {
@@ -48,6 +50,7 @@ export function useContinuousSpeech(
   }, []);
 
   const stopListening = useCallback(() => {
+    wantListeningRef.current = false;
     clearSilenceTimer();
     if (recognitionRef.current) {
       recognitionRef.current.stop();
@@ -66,69 +69,74 @@ export function useContinuousSpeech(
       recognitionRef.current.abort();
     }
 
-    const recognition = new SR();
-    recognition.lang = 'de-DE';
-    recognition.continuous = true;
-    recognition.interimResults = true;
-
     transcriptRef.current = '';
-    processedIndexRef.current = 0;
     setTranscript('');
     setInterimText('');
     lastResultTimeRef.current = Date.now();
+    wantListeningRef.current = true;
 
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
-      lastResultTimeRef.current = Date.now();
+    function startSession() {
+      const recognition = new SR!();
+      recognition.lang = 'de-DE';
+      recognition.continuous = false;    // Single utterance — avoids mobile duplication bugs
+      recognition.interimResults = true;
 
-      let interim = '';
-      const startIdx = event.resultIndex;
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
+        lastResultTimeRef.current = Date.now();
 
-      for (let i = startIdx; i < event.results.length; i++) {
-        const result = event.results[i];
-        if (result && result.length > 0) {
-          const resultObj = event.results[i] as unknown as { isFinal: boolean };
-          if (resultObj.isFinal) {
-            if (i >= processedIndexRef.current) {
-              transcriptRef.current = transcriptRef.current
-                ? transcriptRef.current + ' ' + result[0].transcript
-                : result[0].transcript;
-              processedIndexRef.current = i + 1;
-            }
-          } else {
-            interim += result[0].transcript;
+        // With continuous=false, take the last result (most complete)
+        const last = event.results[event.results.length - 1];
+        if (!last || last.length === 0) return;
+
+        const resultObj = last as unknown as { isFinal: boolean };
+        const text = last[0].transcript;
+
+        if (resultObj.isFinal) {
+          transcriptRef.current = transcriptRef.current
+            ? transcriptRef.current + ' ' + text
+            : text;
+          setTranscript(transcriptRef.current);
+          setInterimText('');
+        } else {
+          setInterimText(text);
+        }
+      };
+
+      recognition.onend = () => {
+        setInterimText('');
+        recognitionRef.current = null;
+
+        // On desktop: auto-restart for hands-free experience
+        // On mobile: stop (user taps mic again to continue)
+        if (!isMobile && wantListeningRef.current) {
+          startSession();
+        } else {
+          // Fire silence callback with whatever we have
+          const text = transcriptRef.current;
+          if (text && onSilenceRef.current) {
+            onSilenceRef.current(text);
           }
+          wantListeningRef.current = false;
+          setIsListening(false);
+          clearSilenceTimer();
         }
-      }
+      };
 
-      setTranscript(transcriptRef.current);
-      setInterimText(interim);
-    };
-
-    recognition.onend = () => {
-      // Auto-restart if still listening (browser may stop continuous mode)
-      if (recognitionRef.current === recognition) {
-        // Fire silence timeout with whatever we have
-        const text = transcriptRef.current;
-        if (text && onSilenceRef.current) {
-          onSilenceRef.current(text);
-        }
+      recognition.onerror = () => {
+        wantListeningRef.current = false;
         setIsListening(false);
         recognitionRef.current = null;
         clearSilenceTimer();
-      }
-    };
+      };
 
-    recognition.onerror = () => {
-      setIsListening(false);
-      recognitionRef.current = null;
-      clearSilenceTimer();
-    };
+      recognitionRef.current = recognition;
+      recognition.start();
+    }
 
-    recognitionRef.current = recognition;
     setIsListening(true);
-    recognition.start();
+    startSession();
 
-    // Start silence detection timer
+    // Start silence detection timer (desktop: triggers after silence)
     clearSilenceTimer();
     silenceTimerRef.current = setInterval(() => {
       const elapsed = Date.now() - lastResultTimeRef.current;
@@ -151,6 +159,7 @@ export function useContinuousSpeech(
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      wantListeningRef.current = false;
       if (recognitionRef.current) {
         recognitionRef.current.abort();
       }

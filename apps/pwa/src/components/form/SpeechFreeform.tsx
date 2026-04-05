@@ -123,94 +123,81 @@ export default function SpeechFreeform({
   const [interimText, setInterimText] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<import('@/lib/speechRecognition').SpeechRecognitionInstance | null>(null);
-  const accumulatedRef = useRef('');
-  const manualStopRef = useRef(false);
+  const wantListeningRef = useRef(false);
 
   const hasSpeech = hasSpeechSupport();
 
-  // Start a new recognition session (called on toggle and auto-restart)
-  const startRecognition = useCallback(() => {
-    const SR = getSpeechRecognition();
-    if (!SR) return;
+  // Detect mobile: no continuous mode, single utterance per tap
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-    const rec = new SR();
-    rec.lang = 'de-DE';
-    rec.continuous = true;
-    rec.interimResults = true;
-
-    rec.onresult = (event: import('@/lib/speechRecognition').SpeechRecognitionEvent) => {
-      let interim = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const result = event.results[i];
-        if (result && result.length > 0) {
-          const isFinal = (event.results[i] as unknown as { isFinal: boolean }).isFinal;
-          if (isFinal) {
-            const transcript = result[0].transcript.trim();
-            if (transcript) {
-              accumulatedRef.current = accumulatedRef.current
-                ? accumulatedRef.current + ' ' + transcript
-                : transcript;
-              // Live update the input field so user sees what's being recognized
-              setInputText((prev) => (prev ? prev + ' ' + transcript : transcript));
-            }
-          } else {
-            interim += result[0].transcript;
-          }
-        }
-      }
-      setInterimText(interim);
-    };
-
-    rec.onend = () => {
-      setInterimText('');
-      // Auto-restart if user hasn't manually stopped (mobile browsers stop after silence)
-      if (!manualStopRef.current && recognitionRef.current === rec) {
-        try {
-          rec.start();
-        } catch {
-          // Recognition can't restart (e.g. permission revoked)
-          setIsListening(false);
-          recognitionRef.current = null;
-        }
-      } else {
-        setIsListening(false);
-        recognitionRef.current = null;
-      }
-    };
-
-    rec.onerror = (event: Event) => {
-      const errorEvent = event as unknown as { error: string };
-      // 'no-speech' is normal on mobile -- just restart
-      if (errorEvent.error === 'no-speech') return;
-      // 'aborted' happens on manual stop
-      if (errorEvent.error === 'aborted') return;
-      setIsListening(false);
-      recognitionRef.current = null;
-    };
-
-    recognitionRef.current = rec;
-    manualStopRef.current = false;
-    setIsListening(true);
-    rec.start();
-  }, []);
-
-  // Toggle mic: tap on, tap off
+  // Toggle mic: tap on, tap off.
   const handleMicToggle = useCallback(() => {
     if (isListening) {
-      // Manual stop
-      manualStopRef.current = true;
+      // Stop
+      wantListeningRef.current = false;
       if (recognitionRef.current) {
         recognitionRef.current.stop();
       }
-      setIsListening(false);
-      recognitionRef.current = null;
-      setTimeout(() => inputRef.current?.focus(), 100);
       return;
     }
 
-    accumulatedRef.current = '';
-    startRecognition();
-  }, [isListening, startRecognition]);
+    const SR = getSpeechRecognition();
+    if (!SR) return;
+
+    wantListeningRef.current = true;
+
+    function startSession() {
+      const rec = new SR!();
+      rec.lang = 'de-DE';
+      rec.continuous = false;       // Always single-utterance — avoids mobile duplication bugs
+      rec.interimResults = true;
+
+      rec.onresult = (event: import('@/lib/speechRecognition').SpeechRecognitionEvent) => {
+        // With continuous=false, there's only one result group.
+        // Take the last result (most complete transcript).
+        const last = event.results[event.results.length - 1];
+        if (!last || last.length === 0) return;
+
+        const isFinal = (last as unknown as { isFinal: boolean }).isFinal;
+        const text = last[0].transcript;
+
+        if (isFinal) {
+          // Immediately put final text into input field
+          setInputText((prev) => (prev ? prev + ' ' + text : text));
+          setInterimText('');
+        } else {
+          setInterimText(text);
+        }
+      };
+
+      rec.onend = () => {
+        setInterimText('');
+        recognitionRef.current = null;
+
+        // On desktop: auto-restart for hands-free experience
+        // On mobile: stop after one utterance (user taps again to continue)
+        if (!isMobile && wantListeningRef.current) {
+          startSession();
+        } else {
+          wantListeningRef.current = false;
+          setIsListening(false);
+        }
+      };
+
+      rec.onerror = () => {
+        wantListeningRef.current = false;
+        setIsListening(false);
+        setInterimText('');
+        recognitionRef.current = null;
+      };
+
+      recognitionRef.current = rec;
+      rec.start();
+    }
+
+    setIsListening(true);
+    startSession();
+  }, [isListening, isMobile]);
 
   // Cleanup on unmount
   useEffect(() => {
