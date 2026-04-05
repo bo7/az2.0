@@ -4,7 +4,12 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
 
+const buildVersion = `0.2.0-${new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14)}`;
+
 export default defineConfig({
+  define: {
+    __BUILD_VERSION__: JSON.stringify(buildVersion),
+  },
   plugins: [
     react(),
     tailwindcss(),

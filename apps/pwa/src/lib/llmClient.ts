@@ -12,7 +12,7 @@ const LLM_PROVIDER: LLMProvider =
 
 // Ollama config
 const OLLAMA_API_URL = import.meta.env.VITE_OLLAMA_API_URL ?? 'http://10.200.0.11:11434';
-const OLLAMA_MODEL = import.meta.env.VITE_OLLAMA_MODEL ?? 'gemma4:27b';
+const OLLAMA_MODEL = import.meta.env.VITE_OLLAMA_MODEL ?? 'gemma4:31b';
 
 // Local MLX config
 const LOCAL_API_URL = import.meta.env.VITE_LLM_API_URL ?? 'http://10.200.0.12:8899';
@@ -138,12 +138,19 @@ BEKANNTE TAETIGKEITEN: ${katalog}
 
 REGELN:
 1. Wenn keine Baustelle erwaehnt wird, nimm die Standard-Baustelle.
-2. Wenn keine Zeiten erwaehnt werden, setze complete=false und frage nach.
-3. Wenn "ganzer Tag" oder "den ganzen Tag" erwaehnt wird, setze von="07:00", bis="16:00".
-4. Materialien sind optional -- wenn keine erwaehnt, ist das OK (complete kann trotzdem true sein).
-5. Einheiten fuer Material: "Stk" (Stueck), "m" (Meter), "m2" (Quadratmeter), "VE" (Verpackungseinheit), "ohne".
-6. Bei unklaren Baustellen-Namen, matche fuzzy gegen die Liste.
-7. Stunden muessen nicht explizit gesagt werden -- berechne sie aus von/bis.
+2. Wenn nur Stundenzahl genannt wird (z.B. "10 Stunden gearbeitet"), berechne: von="07:00", bis=von+stunden+pause. Standard-Pause ist 30 Minuten wenn nicht anders gesagt.
+3. Wenn Pause explizit genannt wird (z.B. "45 Minuten Pause", "eine Stunde Pause", "keine Pause"), nutze diesen Wert. Fuege eine separate Pause-Taetigkeit hinzu mit negativen Stunden.
+4. Wenn weder Zeiten noch Stunden erwaehnt werden, setze complete=false und frage nach.
+5. Wenn "ganzer Tag" oder "den ganzen Tag" erwaehnt wird, setze von="07:00", bis="16:00".
+6. Materialien sind optional -- wenn keine erwaehnt, ist das OK (complete kann trotzdem true sein).
+7. Einheiten fuer Material: "Stk" (Stueck), "m" (Meter), "m2" (Quadratmeter), "VE" (Verpackungseinheit), "ohne".
+8. Bei unklaren Baustellen-Namen, matche fuzzy gegen die Liste.
+9. Stunden muessen nicht explizit gesagt werden -- berechne sie aus von/bis minus Pause.
+10. Pause als eigene Taetigkeit mit beschreibung="Pause" und negativen Stunden eintragen (z.B. -0.5 fuer 30min, -0.75 fuer 45min, -1.0 fuer 60min). Bei "keine Pause" keine Pause-Taetigkeit.
+11. MEHRERE TAETIGKEITEN: Wenn der User mehrere Taetigkeiten aufzaehlt (mit Spiegelstrichen, Nummern, oder "und dann"), erfasse ALLE als separate Eintraege im taetigkeiten-Array. Jede Taetigkeit behaelt den vollen Beschreibungstext.
+12. ZULAGEN: Begriffe wie "Zulage", "Zulage Daemmebene" etc. sind eigene Taetigkeiten -- erfasse sie als separate Eintraege mit dem vollen Text.
+13. BAUTEIL-REFERENZEN: Texte wie "104 N:", "101 O:", "(NO-N10.5)", "(O2-SO)" sind Bauteil-/Achsreferenzen und gehoeren zur Beschreibung dazu. Nicht abschneiden.
+14. Wenn mehrere Positionen beschrieben werden aber nur eine Gesamtzeit, verteile die Stunden gleichmaessig auf alle Taetigkeiten.
 
 ANTWORTE AUSSCHLIESSLICH mit validem JSON in diesem Format:
 {
@@ -153,12 +160,17 @@ ANTWORTE AUSSCHLIESSLICH mit validem JSON in diesem Format:
     "baustelleName": "Dachsanierung Goethestr.",
     "von": "07:00",
     "bis": "16:00",
-    "taetigkeiten": [{"beschreibung": "Dachlatten zugeschnitten und befestigt", "stunden": null}],
-    "materialien": [{"bezeichnung": "Dachlatten", "menge": 30, "einheit": "m", "taetigkeitIndex": 0}]
+    "taetigkeiten": [
+      {"beschreibung": "104 N: Mauerlatte 10/14 (NO-N10.5) angepasst und eingesetzt, inkl. Allujet und Attika", "stunden": null},
+      {"beschreibung": "101 O: Mauerlatte 10/14 (NO-N2) angepasst und eingesetzt, Mauerlatten zugeschnitten inkl. Borsalzbehandlung", "stunden": null},
+      {"beschreibung": "Zulage: Geruest gesaeubert und abgeraeumt", "stunden": null},
+      {"beschreibung": "Zulage Daemmebene: Dampfbremse Dasatop ans Mauerwerk angeschlossen und montiert (N13-O2)", "stunden": null}
+    ],
+    "materialien": [{"bezeichnung": "Mauerlatte 10/14", "menge": 2, "einheit": "Stk", "taetigkeitIndex": 0}]
   },
   "followUpQuestion": null,
-  "newTaetigkeiten": ["Dachlatten zugeschnitten und befestigt"],
-  "newMaterialien": ["Dachlatten"]
+  "newTaetigkeiten": ["Mauerlatte angepasst und eingesetzt", "Geruest gesaeubert und abgeraeumt"],
+  "newMaterialien": ["Mauerlatte 10/14"]
 }
 
 Wenn Daten fehlen (z.B. keine Zeiten), setze "complete": false und stelle eine kurze, freundliche Frage in "followUpQuestion". Beispiel: "Von wann bis wann hast du heute gearbeitet?"

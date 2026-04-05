@@ -252,22 +252,14 @@ export default function Heute() {
             </Button>
           </div>
 
-          {/* New entry buttons */}
-          <div className="mt-4 flex gap-3">
+          {/* New entry button */}
+          <div className="mt-4">
             <Button
-              className="h-12 flex-1 rounded-xl bg-accent text-base font-bold text-accent-foreground hover:bg-accent/90 active:bg-accent/80"
+              className="h-14 w-full rounded-xl bg-accent text-lg font-bold text-accent-foreground hover:bg-accent/90 active:bg-accent/80"
               onClick={() => navigate('/supereasy')}
             >
-              <Plus className="mr-1 size-5" />
-              SuperEasy
-            </Button>
-            <Button
-              variant="outline"
-              className="h-12 flex-1 rounded-xl text-base font-semibold"
-              onClick={() => navigate('/standard')}
-            >
-              <Plus className="mr-1 size-5" />
-              Standard
+              <Plus className="mr-2 size-5" />
+              Neuer Eintrag
             </Button>
           </div>
         </div>
@@ -344,23 +336,19 @@ export default function Heute() {
           <p className="text-center text-lg text-muted-foreground">
             Noch keine Eintraege. Starte jetzt!
           </p>
-          <div className="flex w-full max-w-xs flex-col gap-3">
-            <Button
-              className="h-14 w-full rounded-xl bg-accent text-xl font-bold text-accent-foreground hover:bg-accent/90 active:bg-accent/80"
-              onClick={() => navigate('/supereasy')}
-            >
-              SuperEasy Eintrag
-            </Button>
-            <Button
-              variant="outline"
-              className="h-14 w-full rounded-xl text-lg font-semibold"
-              onClick={() => navigate('/standard')}
-            >
-              Standard Eintrag
-            </Button>
-          </div>
+          <Button
+            className="h-14 w-full max-w-xs rounded-xl bg-accent text-xl font-bold text-accent-foreground hover:bg-accent/90 active:bg-accent/80"
+            onClick={() => navigate('/supereasy')}
+          >
+            Neuer Eintrag
+          </Button>
         </div>
       )}
+
+      {/* Build version */}
+      <p className="mt-auto pt-4 text-center text-[10px] text-muted-foreground/50">
+        v{__BUILD_VERSION__}
+      </p>
     </div>
   );
 }
