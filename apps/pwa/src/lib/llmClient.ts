@@ -1,13 +1,18 @@
-// LLM API client -- supports local MLX server and Google Gemini Flash
+// LLM API client -- supports Ollama, local MLX server, and Google Gemini Flash
 //
 // Provider selection via VITE_LLM_PROVIDER:
-//   "local"  → mlx_lm.server on mac2 (default)
+//   "ollama" → Ollama on local network (default)
+//   "local"  → mlx_lm.server on mac2
 //   "gemini" → Google Gemini Flash via OpenAI-compatible endpoint
 
-type LLMProvider = 'local' | 'gemini';
+type LLMProvider = 'ollama' | 'local' | 'gemini';
 
 const LLM_PROVIDER: LLMProvider =
-  (import.meta.env.VITE_LLM_PROVIDER as LLMProvider) ?? 'local';
+  (import.meta.env.VITE_LLM_PROVIDER as LLMProvider) ?? 'ollama';
+
+// Ollama config
+const OLLAMA_API_URL = import.meta.env.VITE_OLLAMA_API_URL ?? 'http://10.200.0.11:11434';
+const OLLAMA_MODEL = import.meta.env.VITE_OLLAMA_MODEL ?? 'gemma4:27b';
 
 // Local MLX config
 const LOCAL_API_URL = import.meta.env.VITE_LLM_API_URL ?? 'http://10.200.0.12:8899';
@@ -40,6 +45,13 @@ function getProviderConfig(): { url: string; model: string; headers: Record<stri
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${GEMINI_API_KEY}`,
       },
+    };
+  }
+  if (LLM_PROVIDER === 'ollama') {
+    return {
+      url: `${OLLAMA_API_URL}/v1/chat/completions`,
+      model: OLLAMA_MODEL,
+      headers: { 'Content-Type': 'application/json' },
     };
   }
   return {
