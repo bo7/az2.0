@@ -38,6 +38,7 @@ export function useContinuousSpeech(
   const lastResultTimeRef = useRef(0);
   const silenceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const transcriptRef = useRef('');
+  const processedIndexRef = useRef(0);
 
   const clearSilenceTimer = useCallback(() => {
     if (silenceTimerRef.current) {
@@ -71,6 +72,7 @@ export function useContinuousSpeech(
     recognition.interimResults = true;
 
     transcriptRef.current = '';
+    processedIndexRef.current = 0;
     setTranscript('');
     setInterimText('');
     lastResultTimeRef.current = Date.now();
@@ -78,26 +80,27 @@ export function useContinuousSpeech(
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       lastResultTimeRef.current = Date.now();
 
-      let finalText = '';
       let interim = '';
+      const startIdx = event.resultIndex;
 
-      for (let i = 0; i < event.results.length; i++) {
+      for (let i = startIdx; i < event.results.length; i++) {
         const result = event.results[i];
         if (result && result.length > 0) {
-          // Check if result is final (isFinal property on the result list item)
           const resultObj = event.results[i] as unknown as { isFinal: boolean };
           if (resultObj.isFinal) {
-            finalText += result[0].transcript + ' ';
+            if (i >= processedIndexRef.current) {
+              transcriptRef.current = transcriptRef.current
+                ? transcriptRef.current + ' ' + result[0].transcript
+                : result[0].transcript;
+              processedIndexRef.current = i + 1;
+            }
           } else {
             interim += result[0].transcript;
           }
         }
       }
 
-      if (finalText) {
-        transcriptRef.current = finalText.trim();
-        setTranscript(finalText.trim());
-      }
+      setTranscript(transcriptRef.current);
       setInterimText(interim);
     };
 

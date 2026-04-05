@@ -123,6 +123,7 @@ export default function SpeechFreeform({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<import('@/lib/speechRecognition').SpeechRecognitionInstance | null>(null);
   const accumulatedRef = useRef('');
+  const processedIndexRef = useRef(0);
 
   const hasSpeech = hasSpeechSupport();
 
@@ -144,23 +145,28 @@ export default function SpeechFreeform({
     rec.continuous = true;
     rec.interimResults = true;
     accumulatedRef.current = '';
+    processedIndexRef.current = 0;
 
     rec.onresult = (event: import('@/lib/speechRecognition').SpeechRecognitionEvent) => {
-      let finalText = '';
       let interim = '';
-      for (let i = 0; i < event.results.length; i++) {
+      // Only process new results from resultIndex to avoid duplicates on mobile
+      const startIdx = event.resultIndex;
+      for (let i = startIdx; i < event.results.length; i++) {
         const result = event.results[i];
         if (result && result.length > 0) {
           const isFinal = (event.results[i] as unknown as { isFinal: boolean }).isFinal;
           if (isFinal) {
-            finalText += result[0].transcript + ' ';
+            // Only append if we haven't processed this index yet
+            if (i >= processedIndexRef.current) {
+              accumulatedRef.current = accumulatedRef.current
+                ? accumulatedRef.current + ' ' + result[0].transcript
+                : result[0].transcript;
+              processedIndexRef.current = i + 1;
+            }
           } else {
             interim += result[0].transcript;
           }
         }
-      }
-      if (finalText) {
-        accumulatedRef.current = finalText.trim();
       }
       setInterimText(interim);
     };
@@ -168,6 +174,8 @@ export default function SpeechFreeform({
     rec.onend = () => {
       // Put everything into the editable field
       const text = accumulatedRef.current;
+      accumulatedRef.current = '';
+      processedIndexRef.current = 0;
       if (text) {
         setInputText((prev) => (prev ? prev + ' ' + text : text));
       }
