@@ -49,7 +49,7 @@ function todayString(): string {
 
 export default function Heute() {
   const navigate = useNavigate();
-  const { mitarbeiter } = useAuth();
+  const { user, mitarbeiter } = useAuth();
   const { defaults, loading: defaultsLoading } = useSmartDefaults();
   const { cloneOption, cloneEntries, loading: cloneLoading } = useCloneEntry();
 
@@ -195,9 +195,23 @@ export default function Heute() {
         <p className="text-base text-muted-foreground">
           KW {getISOWeekNumber(today)}
         </p>
-        <p className="mt-2 text-lg text-foreground">
-          Hallo {mitarbeiter?.name?.split(' ')[0] ?? 'Mitarbeiter'}
-        </p>
+        <div className="mt-3 flex items-center gap-3">
+          {user?.photoURL ? (
+            <img
+              src={user.photoURL}
+              alt=""
+              referrerPolicy="no-referrer"
+              className="size-10 rounded-full object-cover ring-2 ring-accent/30"
+            />
+          ) : (
+            <div className="flex size-10 items-center justify-center rounded-full bg-accent/20 text-base font-bold text-accent">
+              {(mitarbeiter?.name?.[0] ?? '?').toUpperCase()}
+            </div>
+          )}
+          <p className="text-lg text-foreground">
+            Hallo {mitarbeiter?.name?.split(' ')[0] ?? 'Mitarbeiter'}
+          </p>
+        </div>
       </header>
 
       {/* State A: Has entries today */}

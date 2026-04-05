@@ -62,6 +62,12 @@ export default function Login() {
     <div className="flex min-h-svh flex-col bg-background">
       {/* Header */}
       <div className="flex flex-col items-center justify-center bg-primary px-4 py-12">
+        <div className="mb-3 flex size-16 items-center justify-center rounded-full bg-white/20">
+          <svg className="size-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+        </div>
         <h1 className="text-3xl font-bold text-white">az2.0</h1>
         <p className="mt-1 text-sm text-white/80">Zeiterfassung</p>
       </div>
