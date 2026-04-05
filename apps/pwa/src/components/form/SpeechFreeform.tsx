@@ -24,6 +24,7 @@ interface SpeechFreeformProps {
     positionen: Position[];
     gesamtstunden: number;
   }[]) => void;
+  autoStart?: boolean;
   onCancel: () => void;
 }
 
@@ -91,6 +92,7 @@ export default function SpeechFreeform({
   datum,
   pauseMinutes,
   taetigkeitenKatalog,
+  autoStart,
   onSave,
 }: SpeechFreeformProps) {
   const context = useMemo(
@@ -195,6 +197,16 @@ export default function SpeechFreeform({
     };
   }, []);
 
+  // Auto-start mic when entering Sprechen mode
+  const autoStartedRef = useRef(false);
+  useEffect(() => {
+    if (autoStart && !autoStartedRef.current && hasSpeech && !isListening) {
+      autoStartedRef.current = true;
+      // Small delay to let component mount
+      setTimeout(() => handleMicToggle(), 300);
+    }
+  }, [autoStart, hasSpeech, isListening, handleMicToggle]);
+
   // Send the editable text to LLM
   const handleSend = useCallback(() => {
     const text = inputText.trim();
@@ -244,10 +256,8 @@ export default function SpeechFreeform({
   } else if (parsedEntries.length > 0) {
     avatarMessage = 'Eintrag erfasst! Noch weitere Eintraege?';
   } else if (conversation.length === 0) {
-    avatarMessage = 'Erzaehl einfach was du gemacht hast. Wenn du 2 Sekunden stoppst, werden deine Daten eingetragen.';
-    avatarContext = defaultBaustelleName
-      ? `Du buchst auf ${defaultBaustelleName}. Sag einfach wenn du auf einer anderen gearbeitet hast.`
-      : undefined;
+    avatarMessage = '';
+    avatarContext = undefined;
   } else {
     avatarMessage = conversation[conversation.length - 1]?.text ?? '';
   }
@@ -285,9 +295,9 @@ export default function SpeechFreeform({
               handleSend();
             }
           }}
-          placeholder={followUpQuestion ? 'Antwort eingeben...' : 'Sprich oder tippe...'}
-          rows={2}
-          className="min-h-[56px] flex-1 resize-none rounded-xl border border-input bg-background px-4 py-3 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          placeholder=""
+          rows={3}
+          className="min-h-[80px] flex-1 resize-none rounded-xl border border-input bg-background px-4 py-3 text-lg text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         />
 
         {/* Mic button */}

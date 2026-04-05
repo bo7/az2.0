@@ -326,6 +326,7 @@ export default function SuperEasy() {
             datum={datum}
             pauseMinutes={pauseMinutes}
             taetigkeitenKatalog={[]}
+            autoStart
             onSave={handleSpeechSave}
             onCancel={() => setMode('schreiben')}
           />

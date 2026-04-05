@@ -36,6 +36,7 @@ export default function Abwesenheit() {
 
   const [datum, setDatum] = useState(state.datum ?? todayString());
   const [art, setArt] = useState<AbwesenheitArt>(state.art ?? 'urlaub');
+  const [ganzerTag, setGanzerTag] = useState(true);
   const [notiz, setNotiz] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,8 +52,8 @@ export default function Abwesenheit() {
         mitarbeiterId: mitarbeiter.uid,
         datum,
         art,
-        ganzerTag: true,
-        stunden: 8,
+        ganzerTag,
+        stunden: ganzerTag ? 8 : 4,
         notiz,
       });
       navigate('/');
@@ -61,7 +62,7 @@ export default function Abwesenheit() {
     } finally {
       setSaving(false);
     }
-  }, [mitarbeiter, datum, art, notiz, navigate]);
+  }, [mitarbeiter, datum, art, ganzerTag, notiz, navigate]);
 
   const artOptions: { value: AbwesenheitArt; label: string; classes: string; selectedClasses: string }[] = [
     {
@@ -135,6 +136,37 @@ export default function Abwesenheit() {
               {option.label}
             </button>
           ))}
+        </div>
+      </section>
+
+      {/* Ganzer/Halber Tag */}
+      <section className="mb-6">
+        <p className="mb-2 text-sm font-medium text-muted-foreground">Dauer</p>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => setGanzerTag(true)}
+            className={`flex h-14 items-center justify-center rounded-xl border text-base font-semibold transition-all ${
+              ganzerTag
+                ? 'border-accent bg-accent text-white'
+                : 'border-border bg-card text-foreground'
+            }`}
+            aria-pressed={ganzerTag}
+          >
+            Ganzer Tag
+          </button>
+          <button
+            type="button"
+            onClick={() => setGanzerTag(false)}
+            className={`flex h-14 items-center justify-center rounded-xl border text-base font-semibold transition-all ${
+              !ganzerTag
+                ? 'border-accent bg-accent text-white'
+                : 'border-border bg-card text-foreground'
+            }`}
+            aria-pressed={!ganzerTag}
+          >
+            Halber Tag
+          </button>
         </div>
       </section>
 
