@@ -43,11 +43,11 @@ function parsedToPositionen(
   const stundenPro =
     e.taetigkeiten.length > 0 ? gesamtstunden / e.taetigkeiten.length : gesamtstunden;
 
-  e.taetigkeiten.forEach((t, i) => {
+  e.taetigkeiten.forEach((t) => {
     const pos: TaetigkeitPosition = {
       typ: 'taetigkeit',
-      von: i === 0 ? e.von : '',
-      bis: i === e.taetigkeiten.length - 1 ? e.bis : '',
+      von: e.von,
+      bis: e.bis,
       beschreibung: t.beschreibung,
       stunden: t.stunden ?? stundenPro,
     };

@@ -5,13 +5,6 @@ function formatStunden(stunden: number): string {
   return stunden.toFixed(1).replace('.', ',');
 }
 
-function getFirstBeschreibung(eintrag: Zeiteintrag): string | null {
-  const first = eintrag.positionen.find(
-    (p): p is TaetigkeitPosition => p.typ === 'taetigkeit',
-  );
-  return first?.beschreibung || null;
-}
-
 interface EntryCardProps {
   eintrag: Zeiteintrag;
   baustelleName: string;
@@ -24,16 +17,16 @@ export default function EntryCard({
   onClick,
 }: EntryCardProps) {
   const taetigkeiten = eintrag.positionen.filter(
-    (p): p is TaetigkeitPosition => p.typ === 'taetigkeit',
+    (p): p is TaetigkeitPosition =>
+      p.typ === 'taetigkeit' && p.beschreibung.toLowerCase() !== 'pause',
   );
 
-  const von = taetigkeiten.length > 0 ? taetigkeiten[0].von : '--:--';
-  const bis =
-    taetigkeiten.length > 0
-      ? taetigkeiten[taetigkeiten.length - 1].bis
-      : '--:--';
-
-  const beschreibung = getFirstBeschreibung(eintrag);
+  // Find von/bis from any position that has them
+  const allTaetigkeiten = eintrag.positionen.filter(
+    (p): p is TaetigkeitPosition => p.typ === 'taetigkeit',
+  );
+  const von = allTaetigkeiten.find((t) => t.von)?.von ?? '--:--';
+  const bis = [...allTaetigkeiten].reverse().find((t) => t.bis)?.bis ?? '--:--';
 
   return (
     <button
@@ -54,11 +47,11 @@ export default function EntryCard({
         <p className="text-base text-muted-foreground">
           {von} - {bis}
         </p>
-        {beschreibung && (
-          <p className="mt-0.5 text-sm text-muted-foreground truncate">
-            {beschreibung}
+        {taetigkeiten.map((t, i) => (
+          <p key={i} className="mt-0.5 text-sm text-muted-foreground truncate">
+            {t.beschreibung}
           </p>
-        )}
+        ))}
       </div>
       <div className="ml-4 shrink-0">
         <span className="text-xl font-bold text-accent">
