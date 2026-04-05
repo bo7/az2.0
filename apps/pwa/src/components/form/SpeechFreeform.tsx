@@ -124,20 +124,12 @@ export default function SpeechFreeform({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<import('@/lib/speechRecognition').SpeechRecognitionInstance | null>(null);
   const accumulatedRef = useRef('');
-  const processedIndexRef = useRef(0);
+  const manualStopRef = useRef(false);
 
   const hasSpeech = hasSpeechSupport();
 
-  // Toggle mic: tap on, tap off. All accumulated text goes to input field on stop.
-  const handleMicToggle = useCallback(() => {
-    if (isListening) {
-      // Stop -- put accumulated text into editable field
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-      return;
-    }
-
+  // Start a new recognition session (called on toggle and auto-restart)
+  const startRecognition = useCallback(() => {
     const SR = getSpeechRecognition();
     if (!SR) return;
 
@@ -145,24 +137,21 @@ export default function SpeechFreeform({
     rec.lang = 'de-DE';
     rec.continuous = true;
     rec.interimResults = true;
-    accumulatedRef.current = '';
-    processedIndexRef.current = 0;
 
     rec.onresult = (event: import('@/lib/speechRecognition').SpeechRecognitionEvent) => {
       let interim = '';
-      // Only process new results from resultIndex to avoid duplicates on mobile
-      const startIdx = event.resultIndex;
-      for (let i = startIdx; i < event.results.length; i++) {
+      for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
         if (result && result.length > 0) {
           const isFinal = (event.results[i] as unknown as { isFinal: boolean }).isFinal;
           if (isFinal) {
-            // Only append if we haven't processed this index yet
-            if (i >= processedIndexRef.current) {
+            const transcript = result[0].transcript.trim();
+            if (transcript) {
               accumulatedRef.current = accumulatedRef.current
-                ? accumulatedRef.current + ' ' + result[0].transcript
-                : result[0].transcript;
-              processedIndexRef.current = i + 1;
+                ? accumulatedRef.current + ' ' + transcript
+                : transcript;
+              // Live update the input field so user sees what's being recognized
+              setInputText((prev) => (prev ? prev + ' ' + transcript : transcript));
             }
           } else {
             interim += result[0].transcript;
@@ -173,29 +162,55 @@ export default function SpeechFreeform({
     };
 
     rec.onend = () => {
-      // Put everything into the editable field
-      const text = accumulatedRef.current;
-      accumulatedRef.current = '';
-      processedIndexRef.current = 0;
-      if (text) {
-        setInputText((prev) => (prev ? prev + ' ' + text : text));
-      }
-      setIsListening(false);
       setInterimText('');
-      recognitionRef.current = null;
-      setTimeout(() => inputRef.current?.focus(), 100);
+      // Auto-restart if user hasn't manually stopped (mobile browsers stop after silence)
+      if (!manualStopRef.current && recognitionRef.current === rec) {
+        try {
+          rec.start();
+        } catch {
+          // Recognition can't restart (e.g. permission revoked)
+          setIsListening(false);
+          recognitionRef.current = null;
+        }
+      } else {
+        setIsListening(false);
+        recognitionRef.current = null;
+      }
     };
 
-    rec.onerror = () => {
+    rec.onerror = (event: Event) => {
+      const errorEvent = event as unknown as { error: string };
+      // 'no-speech' is normal on mobile -- just restart
+      if (errorEvent.error === 'no-speech') return;
+      // 'aborted' happens on manual stop
+      if (errorEvent.error === 'aborted') return;
       setIsListening(false);
-      setInterimText('');
       recognitionRef.current = null;
     };
 
     recognitionRef.current = rec;
+    manualStopRef.current = false;
     setIsListening(true);
     rec.start();
-  }, [isListening]);
+  }, []);
+
+  // Toggle mic: tap on, tap off
+  const handleMicToggle = useCallback(() => {
+    if (isListening) {
+      // Manual stop
+      manualStopRef.current = true;
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      setIsListening(false);
+      recognitionRef.current = null;
+      setTimeout(() => inputRef.current?.focus(), 100);
+      return;
+    }
+
+    accumulatedRef.current = '';
+    startRecognition();
+  }, [isListening, startRecognition]);
 
   // Cleanup on unmount
   useEffect(() => {
